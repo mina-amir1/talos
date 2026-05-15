@@ -1,0 +1,142 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\TalosApiToken;
+use App\Models\TalosRole;
+use App\Models\TalosUser;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+
+class SettingsController extends Controller
+{
+    // ── Roles ─────────────────────────────────────────────────────────────
+
+    public function roles()
+    {
+        $roles = TalosRole::withCount('users')->get();
+
+        return view('talos.settings.roles', compact('roles'));
+    }
+
+    public function storeRole(Request $request)
+    {
+        $request->validate([
+            'name'        => 'required|string|max:64|unique:talos_roles,name',
+            'description' => 'nullable|string|max:255',
+            'permissions' => 'nullable|array',
+        ]);
+
+        $role = TalosRole::create($request->only('name', 'description', 'permissions'));
+
+        return redirect()->route('talos.settings.roles')->with('success', 'Role created.');
+    }
+
+    public function updateRole(Request $request, int $id)
+    {
+        $role = TalosRole::findOrFail($id);
+
+        $request->validate([
+            'permissions' => 'nullable|array',
+        ]);
+
+        $role->update(['permissions' => $request->permissions ?? []]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function destroyRole(int $id)
+    {
+        $role = TalosRole::findOrFail($id);
+        $role->delete();
+
+        return redirect()->route('talos.settings.roles')->with('success', 'Role deleted.');
+    }
+
+    // ── Admin Users ────────────────────────────────────────────────────────
+
+    public function users()
+    {
+        $users = TalosUser::with('role')->get();
+        $roles = TalosRole::all();
+
+        return view('talos.settings.users', compact('users', 'roles'));
+    }
+
+    public function storeUser(Request $request)
+    {
+        $request->validate([
+            'firstname' => 'required|string|max:64',
+            'lastname'  => 'required|string|max:64',
+            'email'     => 'required|email|unique:talos_users,email',
+            'password'  => 'required|string|min:8|confirmed',
+            'role_id'   => 'nullable|exists:talos_roles,id',
+        ]);
+
+        TalosUser::create([
+            'firstname' => $request->firstname,
+            'lastname'  => $request->lastname,
+            'email'     => $request->email,
+            'password'  => Hash::make($request->password),
+            'role_id'   => $request->role_id,
+            'is_active' => true,
+        ]);
+
+        return redirect()->route('talos.settings.users')->with('success', 'User created.');
+    }
+
+    public function destroyUser(int $id)
+    {
+        $user = TalosUser::findOrFail($id);
+
+        if ($user->is_super_admin) {
+            return back()->withErrors(['error' => 'Cannot delete a super admin.']);
+        }
+
+        $user->delete();
+
+        return redirect()->route('talos.settings.users')->with('success', 'User deleted.');
+    }
+
+    // ── API Tokens ─────────────────────────────────────────────────────────
+
+    public function apiTokens()
+    {
+        $tokens = TalosApiToken::with('creator')->latest()->get();
+
+        return view('talos.settings.api-tokens', compact('tokens'));
+    }
+
+    public function storeApiToken(Request $request)
+    {
+        $request->validate([
+            'name'       => 'required|string|max:128',
+            'type'       => 'required|in:full-access,read-only,custom',
+            'expires_at' => 'nullable|date|after:now',
+        ]);
+
+        $raw   = Str::random(64);
+        $token = TalosApiToken::create([
+            'name'       => $request->name,
+            'type'       => $request->type,
+            'token'      => hash('sha256', $raw),
+            'expires_at' => $request->expires_at,
+            'created_by' => session('talos_user_id'),
+        ]);
+
+        // Pass the raw token once — it cannot be retrieved again.
+        return redirect()
+            ->route('talos.settings.api-tokens')
+            ->with('new_token', $raw)
+            ->with('success', 'API token created. Copy it now — it will not be shown again.');
+    }
+
+    public function destroyApiToken(int $id)
+    {
+        TalosApiToken::findOrFail($id)->delete();
+
+        return redirect()->route('talos.settings.api-tokens')->with('success', 'Token revoked.');
+    }
+}

@@ -1,0 +1,142 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+
+class SchemaGeneratorService
+{
+    /**
+     * Generate (create) a table from a content-type schema.
+     */
+    public function generate(array $schema, string $uid): void
+    {
+        $table = $schema['collectionName'];
+
+        if (Schema::hasTable($table)) {
+            return;
+        }
+
+        Schema::create($table, function (Blueprint $bp) use ($schema) {
+            $bp->id();
+            $this->addAttributes($bp, $schema['attributes'] ?? []);
+            $bp->unsignedBigInteger('created_by')->nullable();
+            $bp->unsignedBigInteger('updated_by')->nullable();
+
+            if ($schema['options']['draftAndPublish'] ?? false) {
+                $bp->timestamp('published_at')->nullable();
+            }
+
+            $bp->timestamps();
+        });
+    }
+
+    /**
+     * Sync schema changes (add / drop columns) without recreating the table.
+     */
+    public function sync(array $schema, string $uid): void
+    {
+        $table      = $schema['collectionName'];
+        $attributes = $schema['attributes'] ?? [];
+
+        if (! Schema::hasTable($table)) {
+            $this->generate($schema, $uid);
+            return;
+        }
+
+        Schema::table($table, function (Blueprint $bp) use ($table, $attributes) {
+            foreach ($attributes as $name => $field) {
+                if (! Schema::hasColumn($table, $name)) {
+                    // Existing rows have no value for this column yet, so it must
+                    // be nullable regardless of the schema's required setting.
+                    $this->addColumn($bp, $name, array_merge($field, ['required' => false]));
+                }
+            }
+        });
+    }
+
+    /**
+     * Drop the table for a deleted content type.
+     */
+    public function drop(string $uid): void
+    {
+        $service = app(ContentTypeService::class);
+        $schema  = $service->find($uid);
+
+        if ($schema) {
+            Schema::dropIfExists($schema['collectionName']);
+        }
+    }
+
+    private function addAttributes(Blueprint $bp, array $attributes): void
+    {
+        foreach ($attributes as $name => $field) {
+            $this->addColumn($bp, $name, $field);
+        }
+    }
+
+    private function addColumn(Blueprint $bp, string $name, array $field): void
+    {
+        $required = $field['required'] ?? false;
+        $type     = $field['type'];
+
+        $col = match ($type) {
+            'string', 'email', 'password', 'url', 'uid', 'enumeration'
+                => $bp->string($name, $field['maxLength'] ?? 255),
+
+            'text'
+                => $bp->text($name),
+
+            'richtext'
+                => $bp->longText($name),
+
+            'integer'
+                => $bp->integer($name),
+
+            'biginteger'
+                => $bp->bigInteger($name),
+
+            'decimal'
+                => $bp->decimal($name, $field['precision'] ?? 10, $field['scale'] ?? 2),
+
+            'float'
+                => $bp->float($name),
+
+            'boolean'
+                => $bp->boolean($name)->default($field['default'] ?? false),
+
+            'date'
+                => $bp->date($name),
+
+            'datetime'
+                => $bp->dateTime($name),
+
+            'time'
+                => $bp->time($name),
+
+            'json', 'component', 'dynamiczone', 'media', 'repeater'
+                => $bp->json($name),
+
+            'relation' => in_array($field['relation'] ?? 'manyToOne', ['oneToMany', 'manyToMany'])
+                ? $bp->json($name)
+                : $bp->unsignedBigInteger($name),
+
+            default
+                => $bp->string($name, 255),
+        };
+
+        if (! $required && $type !== 'boolean') {
+            $col->nullable();
+        }
+
+        if (isset($field['unique']) && $field['unique']) {
+            $col->unique();
+        }
+
+        if (isset($field['default']) && $type !== 'boolean') {
+            $col->default($field['default']);
+        }
+    }
+}
