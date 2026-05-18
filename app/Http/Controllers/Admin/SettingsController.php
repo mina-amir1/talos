@@ -137,29 +137,44 @@ class SettingsController extends Controller
 
     public function apiTokens()
     {
-        $tokens = TalosApiToken::with('creator')->latest()->get();
+        $tokens       = TalosApiToken::with('creator')->latest()->get();
+        $contentTypes = app(\App\Services\ContentTypeService::class)->all();
 
-        return view('talos.settings.api-tokens', compact('tokens'));
+        return view('talos.settings.api-tokens', compact('tokens', 'contentTypes'));
     }
 
     public function storeApiToken(Request $request)
     {
         $request->validate([
-            'name'       => 'required|string|max:128',
-            'type'       => 'required|in:full-access,read-only,custom',
-            'expires_at' => 'nullable|date|after:now',
+            'name'        => 'required|string|max:128',
+            'type'        => 'required|in:full-access,read-only,custom',
+            'expires_at'  => 'nullable|date|after:now',
+            'permissions' => 'nullable|array',
         ]);
 
-        $raw   = Str::random(64);
-        $token = TalosApiToken::create([
-            'name'       => $request->name,
-            'type'       => $request->type,
-            'token'      => hash('sha256', $raw),
-            'expires_at' => $request->expires_at,
-            'created_by' => session('talos_user_id'),
+        $permissions = null;
+
+        if ($request->type === 'custom') {
+            $permissions = [];
+            foreach ($request->input('permissions', []) as $uid => $ops) {
+                $allowed = array_keys(array_filter((array) $ops));
+                if (! empty($allowed)) {
+                    $permissions[$uid] = $allowed;
+                }
+            }
+        }
+
+        $raw = Str::random(64);
+
+        TalosApiToken::create([
+            'name'        => $request->name,
+            'type'        => $request->type,
+            'token'       => hash('sha256', $raw),
+            'permissions' => $permissions,
+            'expires_at'  => $request->expires_at,
+            'created_by'  => session('talos_user_id'),
         ]);
 
-        // Pass the raw token once — it cannot be retrieved again.
         return redirect()
             ->route('talos.settings.api-tokens')
             ->with('new_token', $raw)
