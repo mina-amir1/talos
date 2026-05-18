@@ -69,11 +69,15 @@ class ContentTypeService
             abort(404, "Content type [{$uid}] not found.");
         }
 
+        // Explicit rename map sent by the UI — strip before saving to schema file
+        $renames = $data['_renames'] ?? [];
+        unset($data['_renames']);
+
         $schema = array_merge($existing, $data);
         unset($schema['__uid']);
 
         $this->save($uid, $schema);
-        app(SchemaGeneratorService::class)->sync($schema, $uid);
+        app(SchemaGeneratorService::class)->sync($schema, $uid, $renames);
 
         return $schema;
     }

@@ -39,9 +39,11 @@ class SchemaGeneratorService
     }
 
     /**
-     * Sync schema changes (add / drop columns) without recreating the table.
+     * Sync schema changes (rename / add columns) without recreating the table.
+     *
+     * @param array $renames  Map of [oldColumnName => newColumnName] detected by ContentTypeService.
      */
-    public function sync(array $schema, string $uid): void
+    public function sync(array $schema, string $uid, array $renames = []): void
     {
         $table      = $schema['collectionName'];
         $attributes = $schema['attributes'] ?? [];
@@ -51,11 +53,19 @@ class SchemaGeneratorService
             return;
         }
 
-        Schema::table($table, function (Blueprint $bp) use ($table, $attributes, $schema) {
+        // Step 1: Apply renames first (each in its own call — SQLite requires this).
+        foreach ($renames as $oldName => $newName) {
+            if (Schema::hasColumn($table, $oldName) && ! Schema::hasColumn($table, $newName)) {
+                Schema::table($table, fn (Blueprint $bp) => $bp->renameColumn($oldName, $newName));
+            }
+        }
+
+        // Step 2: Add genuinely new columns (skip rename targets already handled above).
+        $renamedTargets = array_values($renames);
+
+        Schema::table($table, function (Blueprint $bp) use ($table, $attributes, $schema, $renamedTargets) {
             foreach ($attributes as $name => $field) {
-                if (! Schema::hasColumn($table, $name)) {
-                    // Existing rows have no value for this column yet, so it must
-                    // be nullable regardless of the schema's required setting.
+                if (! Schema::hasColumn($table, $name) && ! in_array($name, $renamedTargets)) {
                     $this->addColumn($bp, $name, array_merge($field, ['required' => false]));
                 }
             }

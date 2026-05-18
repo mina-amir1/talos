@@ -482,6 +482,7 @@ function fieldBuilder(initialAttributes, uid) {
         editingField: null,
         editingIndex: null,
         saving: false,
+        renames: {},   // { dbColumnName: newColumnName } — built up before each save
         newSubFieldName: '',
         newSubFieldType: 'string',
         newSubFieldConfig: {},
@@ -497,7 +498,7 @@ function fieldBuilder(initialAttributes, uid) {
         },
 
         editField(index) {
-            this.editingField = { ...this.fields[index] };
+            this.editingField = { ...this.fields[index], _originalName: this.fields[index].name };
             this.editingIndex = index;
             this.showPicker   = false;
         },
@@ -526,7 +527,6 @@ function fieldBuilder(initialAttributes, uid) {
         addOrUpdateField() {
             if (!this.editingField.name) return;
 
-            // Check for duplicate names (excluding current index)
             const duplicate = this.fields.some((f, i) => f.name === this.editingField.name && i !== this.editingIndex);
             if (duplicate) {
                 alert('A field with this name already exists.');
@@ -534,7 +534,28 @@ function fieldBuilder(initialAttributes, uid) {
             }
 
             if (this.editingIndex !== null) {
-                this.fields[this.editingIndex] = { ...this.editingField };
+                const originalName = this.editingField._originalName;
+                const newName      = this.editingField.name;
+
+                if (originalName && originalName !== newName) {
+                    // If this field was already renamed earlier in this session (A→B now renamed to C),
+                    // find the true DB original (A) and update the mapping to A→C.
+                    const trueOriginal = Object.keys(this.renames).find(k => this.renames[k] === originalName) ?? originalName;
+
+                    if (trueOriginal !== originalName) {
+                        delete this.renames[trueOriginal]; // drop intermediate A→B
+                    }
+
+                    if (trueOriginal === newName) {
+                        delete this.renames[trueOriginal]; // rename undone — no DB op needed
+                    } else {
+                        this.renames[trueOriginal] = newName;
+                    }
+                }
+
+                const saved = { ...this.editingField };
+                delete saved._originalName;
+                this.fields[this.editingIndex] = saved;
             } else {
                 this.fields.push({ ...this.editingField });
             }
@@ -576,12 +597,16 @@ function fieldBuilder(initialAttributes, uid) {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     },
-                    body: JSON.stringify({ attributes: toObject(this.fields) }),
+                    body: JSON.stringify({
+                        attributes: toObject(this.fields),
+                        _renames:   this.renames,
+                    }),
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
+                    this.renames = {}; // renames applied — reset for next session
                     this.showSuccess('Schema saved successfully!');
                 } else {
                     alert('Error: ' + (data.error || 'Unknown error'));
