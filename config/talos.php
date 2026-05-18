@@ -42,4 +42,14 @@ return [
     |--------------------------------------------------------------------------
     */
     'default_page_size' => env('TALOS_PAGE_SIZE', 25),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Localization
+    |--------------------------------------------------------------------------
+    | default_locale : used when no ?locale= param is given
+    | locales        : comma-separated list of enabled locale codes
+    */
+    'default_locale' => env('TALOS_DEFAULT_LOCALE', 'en'),
+    'locales'        => array_filter(array_map('trim', explode(',', env('TALOS_LOCALES', 'en')))),
 ];

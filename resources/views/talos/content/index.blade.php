@@ -4,6 +4,16 @@
 @section('header', $contentType['info']['displayName'])
 
 @section('header-actions')
+    @if($i18n)
+        <div class="flex items-center gap-1 bg-gray-800 rounded-lg p-1">
+            @foreach($locales as $loc)
+                <a href="{{ route('talos.content.index', ['uid' => $uid, 'locale' => $loc]) }}"
+                   class="px-3 py-1 rounded text-xs font-medium transition-colors {{ $locale === $loc ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white' }}">
+                    {{ strtoupper($loc) }}
+                </a>
+            @endforeach
+        </div>
+    @endif
     <a href="{{ route('talos.content-type-builder.edit', ['uid' => $uid]) }}"
        class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-lg text-sm transition-colors flex items-center gap-1.5">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13,12 +23,12 @@
         </svg>
         Edit schema
     </a>
-    <a href="{{ route('talos.content.create', ['uid' => $uid]) }}"
+    <a href="{{ route('talos.content.create', array_filter(['uid' => $uid, 'locale' => $i18n ? $locale : null])) }}"
        class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
-        Create entry
+        Create entry{{ $i18n ? ' (' . strtoupper($locale) . ')' : '' }}
     </a>
 @endsection
 
@@ -67,6 +77,9 @@
                                 {{ str_replace('_', ' ', $col) }}
                             </th>
                         @endforeach
+                        @if($i18n)
+                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Locale</th>
+                        @endif
                         @if($draftable)
                             <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                         @endif
@@ -92,6 +105,13 @@
                                     @endif
                                 </td>
                             @endforeach
+                            @if($i18n)
+                                <td class="px-4 py-3">
+                                    <span class="text-xs bg-gray-800 text-gray-400 border border-gray-700 px-2 py-0.5 rounded font-mono">
+                                        {{ strtoupper($entry->locale ?? '?') }}
+                                    </span>
+                                </td>
+                            @endif
                             @if($draftable)
                                 <td class="px-4 py-3">
                                     @if($entry->published_at)

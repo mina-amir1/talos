@@ -56,6 +56,7 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::delete('/{uid}/{id}',         [ContentManagerController::class, 'destroy'])->name('destroy');
             Route::post('/{uid}/{id}/publish',   [ContentManagerController::class, 'publish'])->name('publish');
             Route::post('/{uid}/{id}/unpublish', [ContentManagerController::class, 'unpublish'])->name('unpublish');
+            Route::post('/{uid}/{id}/translate', [ContentManagerController::class, 'translate'])->name('translate');
         });
 
         // Media Library
@@ -68,6 +69,10 @@ Route::prefix($prefix)->name('talos.')->group(function () {
 
         // Settings
         Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('locales',            [SettingsController::class, 'locales'])->name('locales');
+            Route::post('locales',           [SettingsController::class, 'storeLocale'])->name('locales.store');
+            Route::delete('locales/{code}',  [SettingsController::class, 'destroyLocale'])->name('locales.destroy');
+
             Route::get('roles',              [SettingsController::class, 'roles'])->name('roles');
             Route::post('roles',             [SettingsController::class, 'storeRole'])->name('roles.store');
             Route::put('roles/{id}',         [SettingsController::class, 'updateRole'])->name('roles.update');

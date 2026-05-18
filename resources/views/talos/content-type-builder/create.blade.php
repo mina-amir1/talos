@@ -106,6 +106,22 @@
                                 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
             </div>
+
+            <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+                <div>
+                    <p class="text-sm font-medium text-white">Internationalization (i18n)</p>
+                    <p class="text-xs text-gray-500">Allow entries in multiple languages</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="hidden" name="options[i18n]" value="0">
+                    <input type="checkbox" name="options[i18n]" value="1"
+                           {{ old('options.i18n') ? 'checked' : '' }}
+                           class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-700 peer-checked:bg-blue-600 rounded-full peer
+                                peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px]
+                                after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                </label>
+            </div>
         </div>
 
         <div class="flex items-center justify-between">

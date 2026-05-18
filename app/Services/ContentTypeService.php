@@ -111,6 +111,7 @@ class ContentTypeService
             ],
             'options' => [
                 'draftAndPublish' => $data['options']['draftAndPublish'] ?? false,
+                'i18n'            => $data['options']['i18n'] ?? false,
             ],
             'attributes' => $data['attributes'] ?? [],
         ];

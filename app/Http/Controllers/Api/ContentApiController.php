@@ -27,8 +27,10 @@ class ContentApiController extends Controller
             return $this->notFound($name);
         }
 
-        $uid   = $contentType['__uid'];
-        $model = $this->modelService->make($uid);
+        $uid    = $contentType['__uid'];
+        $model  = $this->modelService->make($uid);
+        $i18n   = (bool) ($contentType['options']['i18n'] ?? false);
+        $locale = $this->requestLocale($request);
 
         // Single types return one entry instead of a paginated list
         if (($contentType['kind'] ?? 'collectionType') === 'singleType') {
@@ -38,16 +40,18 @@ class ContentApiController extends Controller
                 $query->whereNotNull('published_at');
             }
 
-            $entry = $query->first();
+            if ($i18n) {
+                $entry = (clone $query)->where('locale', $locale)->first()
+                    ?? (clone $query)->where('locale', config('talos.default_locale'))->first();
+            } else {
+                $entry = $query->first();
+            }
 
             if (! $entry) {
                 return response()->json(['data' => null]);
             }
 
-            $data = $this->processEntries(
-                [$entry->toArray()],
-                $contentType['attributes'] ?? []
-            )[0];
+            $data = $this->processEntries([$entry->toArray()], $contentType['attributes'] ?? [], $locale)[0];
 
             return response()->json(['data' => $data]);
         }
@@ -56,6 +60,10 @@ class ContentApiController extends Controller
 
         if ($contentType['options']['draftAndPublish'] ?? false) {
             $query->whereNotNull('published_at');
+        }
+
+        if ($i18n) {
+            $query->where('locale', $locale);
         }
 
         if ($request->has('filters')) {
@@ -77,7 +85,8 @@ class ContentApiController extends Controller
         $paginator = $query->paginate($pageSize, ['*'], 'page', $page);
         $items     = $this->processEntries(
             collect($paginator->items())->map->toArray()->all(),
-            $contentType['attributes'] ?? []
+            $contentType['attributes'] ?? [],
+            $locale
         );
 
         return response()->json([
@@ -93,7 +102,7 @@ class ContentApiController extends Controller
         ]);
     }
 
-    public function show(string $name, int $id): JsonResponse
+    public function show(Request $request, string $name, int $id): JsonResponse
     {
         $contentType = $this->resolveType($name);
 
@@ -101,14 +110,32 @@ class ContentApiController extends Controller
             return $this->notFound($name);
         }
 
-        $uid   = $contentType['__uid'];
-        $model = $this->modelService->make($uid);
-        $entry = $model->newQuery()->findOrFail($id);
+        $uid    = $contentType['__uid'];
+        $model  = $this->modelService->make($uid);
+        $entry  = $model->newQuery()->findOrFail($id);
+        $locale = $this->requestLocale($request);
+        $i18n   = (bool) ($contentType['options']['i18n'] ?? false);
 
-        $data = $this->processEntries(
-            [$entry->toArray()],
-            $contentType['attributes'] ?? []
-        )[0];
+        // If i18n and the found entry isn't in the requested locale, swap to it
+        if ($i18n && $entry->locale !== $locale && $entry->localizations_id) {
+            $localized = $model->newQuery()
+                ->where('localizations_id', $entry->localizations_id)
+                ->where('locale', $locale)
+                ->first();
+
+            if (! $localized) {
+                $localized = $model->newQuery()
+                    ->where('localizations_id', $entry->localizations_id)
+                    ->where('locale', config('talos.default_locale'))
+                    ->first();
+            }
+
+            if ($localized) {
+                $entry = $localized;
+            }
+        }
+
+        $data = $this->processEntries([$entry->toArray()], $contentType['attributes'] ?? [], $locale)[0];
 
         return response()->json(['data' => $data]);
     }
@@ -221,14 +248,15 @@ class ContentApiController extends Controller
         return response()->json(['data' => null], 200);
     }
 
-    private function processEntries(array $entries, array $attributes): array
+    private function processEntries(array $entries, array $attributes, string $locale = null): array
     {
-        $entries = $this->resolveMediaFields($entries, $attributes);
-        $entries = $this->resolveRelationFields($entries, $attributes);
+        $locale  ??= config('talos.default_locale');
+        $entries   = $this->resolveMediaFields($entries, $attributes);
+        $entries   = $this->resolveRelationFields($entries, $attributes, $locale);
         return $entries;
     }
 
-    private function resolveRelationFields(array $entries, array $attributes): array
+    private function resolveRelationFields(array $entries, array $attributes, string $locale): array
     {
         if (empty($entries)) {
             return $entries;
@@ -239,6 +267,8 @@ class ContentApiController extends Controller
         if (empty($relationFields)) {
             return $entries;
         }
+
+        $defaultLocale = config('talos.default_locale');
 
         // Collect all referenced IDs per target UID in one pass
         $idsByTarget = [];
@@ -256,22 +286,39 @@ class ContentApiController extends Controller
             }
         }
 
-        // Batch fetch each target type
+        // Batch fetch each target type, swapping to the requested locale when i18n is enabled
         $mapsByTarget = [];
         foreach ($idsByTarget as $targetUid => $ids) {
             $targetType = $this->typeService->find($targetUid);
             if (! $targetType) continue;
 
-            $records = $this->modelService->make($targetUid)
-                ->newQuery()
-                ->whereIn('id', array_unique($ids))
-                ->get();
-
-            // Filter related entry data to only schema-defined fields
+            $targetModel = $this->modelService->make($targetUid);
             $targetAttrs = $targetType['attributes'] ?? [];
-            $mapsByTarget[$targetUid] = $records->keyBy('id')->map(function ($r) use ($targetAttrs) {
-                return $this->filterToSchema([$r->toArray()], $targetAttrs)[0];
-            });
+            $targetI18n  = (bool) ($targetType['options']['i18n'] ?? false);
+            $uniqueIds   = array_unique($ids);
+
+            $records = $targetModel->newQuery()->whereIn('id', $uniqueIds)->get();
+
+            // If the target type is localised, try to swap each record for the requested locale version
+            if ($targetI18n && $locale !== $defaultLocale) {
+                $localizationsIds = $records->pluck('localizations_id')->filter()->unique()->values()->all();
+
+                if (! empty($localizationsIds)) {
+                    $localeVersions = $targetModel->newQuery()
+                        ->whereIn('localizations_id', $localizationsIds)
+                        ->where('locale', $locale)
+                        ->get()
+                        ->keyBy('localizations_id');
+
+                    $records = $records->map(
+                        fn($r) => $localeVersions->get($r->localizations_id) ?? $r
+                    );
+                }
+            }
+
+            $mapsByTarget[$targetUid] = $records->keyBy('id')->map(
+                fn($r) => $this->filterToSchema([$r->toArray()], $targetAttrs)[0]
+            );
         }
 
         // Replace IDs with resolved data
@@ -459,6 +506,13 @@ class ContentApiController extends Controller
         }
 
         return $rules;
+    }
+
+    private function requestLocale(Request $request): string
+    {
+        return $request->input('locale')
+            ?? $request->input('lang')
+            ?? config('talos.default_locale');
     }
 
     private function notFound(string $name): JsonResponse

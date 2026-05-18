@@ -29,6 +29,11 @@ class SchemaGeneratorService
                 $bp->timestamp('published_at')->nullable();
             }
 
+            if ($schema['options']['i18n'] ?? false) {
+                $bp->string('locale', 10)->default(config('talos.default_locale'))->index();
+                $bp->unsignedBigInteger('localizations_id')->nullable()->index();
+            }
+
             $bp->timestamps();
         });
     }
@@ -46,13 +51,18 @@ class SchemaGeneratorService
             return;
         }
 
-        Schema::table($table, function (Blueprint $bp) use ($table, $attributes) {
+        Schema::table($table, function (Blueprint $bp) use ($table, $attributes, $schema) {
             foreach ($attributes as $name => $field) {
                 if (! Schema::hasColumn($table, $name)) {
                     // Existing rows have no value for this column yet, so it must
                     // be nullable regardless of the schema's required setting.
                     $this->addColumn($bp, $name, array_merge($field, ['required' => false]));
                 }
+            }
+
+            if (($schema['options']['i18n'] ?? false) && ! Schema::hasColumn($table, 'locale')) {
+                $bp->string('locale', 10)->default(config('talos.default_locale'))->index();
+                $bp->unsignedBigInteger('localizations_id')->nullable()->index();
             }
         });
     }

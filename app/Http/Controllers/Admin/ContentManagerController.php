@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\TalosMedia;
 use App\Services\ContentTypeService;
 use App\Services\DynamicModelService;
+use App\Services\LocaleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -24,23 +25,36 @@ class ContentManagerController extends Controller
             abort(404);
         }
 
+        $i18n    = (bool) ($contentType['options']['i18n'] ?? false);
+        $locales = app(LocaleService::class)->all();
+        $locale  = request('locale', config('talos.default_locale'));
+
         // Single types go straight to the edit/create form
         if (($contentType['kind'] ?? 'collectionType') === 'singleType') {
             $model = $this->modelService->make($uid);
-            $entry = $model->newQuery()->first();
+            $query = $model->newQuery();
+            if ($i18n) {
+                $query->where('locale', $locale);
+            }
+            $entry = $query->first();
 
             if ($entry) {
                 return redirect()->route('talos.content.edit', ['uid' => $uid, 'id' => $entry->id]);
             }
 
-            return redirect()->route('talos.content.create', ['uid' => $uid]);
+            return redirect()->route('talos.content.create', ['uid' => $uid, 'locale' => $locale]);
         }
 
-        $model   = $this->modelService->make($uid);
-        // Admin always sees all entries (drafts + published). The public API hides drafts.
-        $entries = $model->newQuery()->latest()->paginate(config('talos.default_page_size'));
+        $model = $this->modelService->make($uid);
+        $query = $model->newQuery()->latest();
 
-        return view('talos.content.index', compact('contentType', 'entries', 'uid'));
+        if ($i18n) {
+            $query->where('locale', $locale);
+        }
+
+        $entries = $query->paginate(config('talos.default_page_size'));
+
+        return view('talos.content.index', compact('contentType', 'entries', 'uid', 'i18n', 'locale', 'locales'));
     }
 
     public function create(string $uid)
@@ -51,11 +65,18 @@ class ContentManagerController extends Controller
             abort(404);
         }
 
+        $i18n    = (bool) ($contentType['options']['i18n'] ?? false);
+        $locales = app(LocaleService::class)->all();
+        $locale  = request('locale', config('talos.default_locale'));
+
         $components      = app(\App\Services\ComponentService::class)->all();
         $mediaItems      = TalosMedia::latest()->get();
         $relationOptions = $this->loadRelationOptions($contentType['attributes'] ?? []);
 
-        return view('talos.content.form', compact('contentType', 'uid', 'components', 'mediaItems', 'relationOptions'));
+        return view('talos.content.form', compact(
+            'contentType', 'uid', 'components', 'mediaItems', 'relationOptions',
+            'i18n', 'locale', 'locales'
+        ));
     }
 
     public function store(Request $request, string $uid)
@@ -66,10 +87,16 @@ class ContentManagerController extends Controller
             abort(404);
         }
 
+        $i18n = (bool) ($contentType['options']['i18n'] ?? false);
         $data = $this->processFormData($request, $contentType['attributes'] ?? []);
 
         if ($contentType['options']['draftAndPublish'] ?? false) {
             $data['published_at'] = $request->boolean('publish') ? now() : null;
+        }
+
+        if ($i18n) {
+            $data['locale']           = $request->input('locale', config('talos.default_locale'));
+            $data['localizations_id'] = $request->input('localizations_id') ?: null;
         }
 
         $data['created_by'] = session('talos_user_id');
@@ -78,11 +105,21 @@ class ContentManagerController extends Controller
         $model = $this->modelService->make($uid);
         $entry = $model->newQuery()->create($data);
 
-        // Single types go back to their edit form, not the list
+        // First entry of this locale group — point localizations_id to itself
+        if ($i18n && ! $entry->localizations_id) {
+            $entry->update(['localizations_id' => $entry->id]);
+        }
+
         if (($contentType['kind'] ?? 'collectionType') === 'singleType') {
             return redirect()
                 ->route('talos.content.edit', ['uid' => $uid, 'id' => $entry->id])
                 ->with('success', 'Entry saved.');
+        }
+
+        if ($i18n) {
+            return redirect()
+                ->route('talos.content.edit', ['uid' => $uid, 'id' => $entry->id])
+                ->with('success', 'Entry created. Add translations using the panel on the right.');
         }
 
         return redirect()
@@ -98,13 +135,32 @@ class ContentManagerController extends Controller
             abort(404);
         }
 
-        $model           = $this->modelService->make($uid);
-        $entry           = $model->newQuery()->findOrFail($id);
+        $i18n    = (bool) ($contentType['options']['i18n'] ?? false);
+        $locales = app(LocaleService::class)->all();
+
+        $model  = $this->modelService->make($uid);
+        $entry  = $model->newQuery()->findOrFail($id);
+        $locale = $i18n ? ($entry->locale ?? config('talos.default_locale')) : config('talos.default_locale');
+
+        // Sibling translations (other locale versions of the same logical entry)
+        $siblings = [];
+        if ($i18n && $entry->localizations_id) {
+            $siblings = $model->newQuery()
+                ->where('localizations_id', $entry->localizations_id)
+                ->where('id', '!=', $entry->id)
+                ->get(['id', 'locale'])
+                ->keyBy('locale')
+                ->toArray();
+        }
+
         $components      = app(\App\Services\ComponentService::class)->all();
         $mediaItems      = TalosMedia::latest()->get();
         $relationOptions = $this->loadRelationOptions($contentType['attributes'] ?? []);
 
-        return view('talos.content.form', compact('contentType', 'uid', 'entry', 'components', 'mediaItems', 'relationOptions'));
+        return view('talos.content.form', compact(
+            'contentType', 'uid', 'entry', 'components', 'mediaItems', 'relationOptions',
+            'i18n', 'locale', 'locales', 'siblings'
+        ));
     }
 
     public function update(Request $request, string $uid, int $id)
@@ -115,6 +171,7 @@ class ContentManagerController extends Controller
             abort(404);
         }
 
+        $i18n = (bool) ($contentType['options']['i18n'] ?? false);
         $data = $this->processFormData($request, $contentType['attributes'] ?? []);
 
         if ($contentType['options']['draftAndPublish'] ?? false) {
@@ -126,15 +183,16 @@ class ContentManagerController extends Controller
         $model = $this->modelService->make($uid);
         $model->newQuery()->findOrFail($id)->update($data);
 
-        // Single types stay on the edit form
         if (($contentType['kind'] ?? 'collectionType') === 'singleType') {
             return redirect()
                 ->route('talos.content.edit', ['uid' => $uid, 'id' => $id])
                 ->with('success', 'Entry saved.');
         }
 
+        $locale = $i18n ? $request->input('locale', config('talos.default_locale')) : null;
+
         return redirect()
-            ->route('talos.content.index', ['uid' => $uid])
+            ->route('talos.content.index', array_filter(['uid' => $uid, 'locale' => $locale]))
             ->with('success', 'Entry updated successfully.');
     }
 
@@ -162,6 +220,54 @@ class ContentManagerController extends Controller
         $model->newQuery()->findOrFail($id)->update(['published_at' => null]);
 
         return back()->with('success', 'Entry unpublished.');
+    }
+
+    public function translate(Request $request, string $uid, int $id)
+    {
+        $contentType = $this->typeService->find($uid);
+
+        if (! $contentType || ! ($contentType['options']['i18n'] ?? false)) {
+            abort(404);
+        }
+
+        $newLocale = $request->input('locale');
+
+        if (! $newLocale || ! in_array($newLocale, app(LocaleService::class)->all())) {
+            return back()->withErrors(['error' => 'Invalid locale.']);
+        }
+
+        $model  = $this->modelService->make($uid);
+        $source = $model->newQuery()->findOrFail($id);
+
+        // Check if this locale already exists for this entry group
+        $existing = $model->newQuery()
+            ->where('localizations_id', $source->localizations_id)
+            ->where('locale', $newLocale)
+            ->first();
+
+        if ($existing) {
+            return redirect()->route('talos.content.edit', ['uid' => $uid, 'id' => $existing->id]);
+        }
+
+        // Create a copy with the new locale — editor fills in the translated content
+        $data = collect($source->toArray())
+            ->except(['id', 'locale', 'localizations_id', 'created_at', 'updated_at', 'created_by', 'updated_by'])
+            ->toArray();
+
+        $data['locale']           = $newLocale;
+        $data['localizations_id'] = $source->localizations_id;
+        $data['created_by']       = session('talos_user_id');
+        $data['updated_by']       = session('talos_user_id');
+
+        if ($contentType['options']['draftAndPublish'] ?? false) {
+            $data['published_at'] = null;
+        }
+
+        $entry = $model->newQuery()->create($data);
+
+        return redirect()
+            ->route('talos.content.edit', ['uid' => $uid, 'id' => $entry->id])
+            ->with('success', 'Translation created for locale "' . $newLocale . '". Update the content below.');
     }
 
     private function processFormData(Request $request, array $attributes): array
@@ -214,8 +320,6 @@ class ContentManagerController extends Controller
 
             $entries = $this->modelService->make($targetUid)->newQuery()->latest()->get();
 
-            // Find the first string/text attribute to use as a display label
-            // Prefer clean text fields; fall back to richtext/blocks (HTML stripped later)
             $labelField = collect($targetType['attributes'] ?? [])
                 ->filter(fn($a) => in_array($a['type'] ?? '', ['string', 'text', 'email', 'uid']))
                 ->keys()

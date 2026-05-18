@@ -46,6 +46,10 @@
 @php
     $attributes  = $contentType['attributes'] ?? [];
     $draftable   = $contentType['options']['draftAndPublish'] ?? false;
+    $i18n        = $i18n ?? false;
+    $locale      = $locale ?? config('talos.default_locale');
+    $locales     = $locales ?? app(\App\Services\LocaleService::class)->all();
+    $siblings    = $siblings ?? [];
 
     // Build uid → schema map for component fields
     $componentMap = [];
@@ -61,6 +65,12 @@
           method="POST" enctype="multipart/form-data" id="content-form" class="flex-1">
         @csrf
         @if($isEdit) @method('PUT') @endif
+        @if($i18n)
+            <input type="hidden" name="locale" value="{{ $locale }}">
+            @if(!$isEdit)
+                <input type="hidden" name="localizations_id" value="{{ request('localizations_id') }}">
+            @endif
+        @endif
 
         <div class="space-y-5">
             @foreach($attributes as $name => $field)
@@ -890,6 +900,49 @@
             <a href="{{ route('talos.content.index', ['uid' => $uid]) }}"
                class="block text-center text-sm text-gray-500 hover:text-gray-300 pt-1">← Back to list</a>
         </div>
+
+        @if($i18n)
+            {{-- Locale badge --}}
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Locale</p>
+                <span class="inline-block px-3 py-1 bg-blue-900/40 text-blue-300 border border-blue-800 rounded-lg text-sm font-mono font-semibold">
+                    {{ strtoupper($locale) }}
+                </span>
+            </div>
+
+            {{-- Translations panel (edit only) --}}
+            @if($isEdit)
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Translations</p>
+                    <div class="space-y-1.5">
+                        @foreach($locales as $loc)
+                            @if($loc === $locale)
+                                <div class="flex items-center justify-between px-3 py-2 bg-blue-900/20 border border-blue-800 rounded-lg">
+                                    <span class="text-xs font-mono font-semibold text-blue-300">{{ strtoupper($loc) }}</span>
+                                    <span class="text-xs text-blue-400">Current</span>
+                                </div>
+                            @elseif(isset($siblings[$loc]))
+                                <a href="{{ route('talos.content.edit', ['uid' => $uid, 'id' => $siblings[$loc]['id']]) }}"
+                                   class="flex items-center justify-between px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg transition-colors">
+                                    <span class="text-xs font-mono font-semibold text-gray-300">{{ strtoupper($loc) }}</span>
+                                    <span class="text-xs text-green-400">Edit →</span>
+                                </a>
+                            @else
+                                <form action="{{ route('talos.content.translate', ['uid' => $uid, 'id' => $entry->id]) }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="locale" value="{{ $loc }}">
+                                    <button type="submit"
+                                            class="w-full flex items-center justify-between px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-dashed border-gray-700 rounded-lg transition-colors">
+                                        <span class="text-xs font-mono font-semibold text-gray-500">{{ strtoupper($loc) }}</span>
+                                        <span class="text-xs text-gray-500">+ Add</span>
+                                    </button>
+                                </form>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
 
         @if($isEdit)
             <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-2 text-xs text-gray-600">

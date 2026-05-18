@@ -6,12 +6,45 @@ use App\Http\Controllers\Controller;
 use App\Models\TalosApiToken;
 use App\Models\TalosRole;
 use App\Models\TalosUser;
+use App\Services\LocaleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class SettingsController extends Controller
 {
+    // ── Locales ───────────────────────────────────────────────────────────
+
+    public function locales(LocaleService $localeService)
+    {
+        $locales        = $localeService->all();
+        $defaultLocale  = $localeService->default();
+
+        return view('talos.settings.locales', compact('locales', 'defaultLocale'));
+    }
+
+    public function storeLocale(Request $request, LocaleService $localeService)
+    {
+        $request->validate([
+            'code' => ['required', 'string', 'max:10', 'regex:/^[a-z]{2}(-[A-Z]{2})?$/'],
+        ]);
+
+        $localeService->add($request->input('code'));
+
+        return back()->with('success', 'Locale "' . $request->input('code') . '" added.');
+    }
+
+    public function destroyLocale(string $code, LocaleService $localeService)
+    {
+        if ($code === $localeService->default()) {
+            return back()->withErrors(['error' => 'Cannot remove the default locale.']);
+        }
+
+        $localeService->remove($code);
+
+        return back()->with('success', 'Locale "' . $code . '" removed.');
+    }
+
     // ── Roles ─────────────────────────────────────────────────────────────
 
     public function roles()
