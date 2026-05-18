@@ -78,11 +78,22 @@
 
         {{-- Navigation --}}
         <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            @php
+                $types      = app(\App\Services\ContentTypeService::class)->all();
+                $navUser    = $talosUser ?? null;
+                $isSA       = $navUser?->is_super_admin ?? true;
+                $navPerms   = $navUser?->role?->permissions ?? [];
+
+                $canSection = fn(string $s) => $isSA || (bool)($navPerms['sections'][$s] ?? false);
+                $canContent = fn(string $uid) => $isSA || !empty($navPerms['content-manager'][$uid] ?? []);
+
+                $visibleTypes = array_filter($types, fn($t) => $canContent($t['__uid']));
+            @endphp
+
             {{-- Content Manager --}}
             <p class="px-3 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Content</p>
 
-            @php $types = app(\App\Services\ContentTypeService::class)->all(); @endphp
-            @forelse($types as $type)
+            @forelse($visibleTypes as $type)
                 <a href="{{ route('talos.content.index', ['uid' => $type['__uid']]) }}"
                    class="sidebar-link {{ request()->is('*content-manager/' . $type['__uid'] . '*') ? 'active' : '' }}">
                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,78 +106,88 @@
                 <p class="px-3 py-2 text-xs text-gray-600 italic">No content types yet</p>
             @endforelse
 
-            <div class="my-3 border-t border-gray-800"></div>
-
             {{-- Builder --}}
-            <p class="px-3 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Builder</p>
+            @if($canSection('content-type-builder') || $canSection('components'))
+                <div class="my-3 border-t border-gray-800"></div>
+                <p class="px-3 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Builder</p>
 
-            <a href="{{ route('talos.content-type-builder.index') }}"
-               class="sidebar-link {{ request()->is('*content-type-builder*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-                </svg>
-                Content-Type Builder
-            </a>
+                @if($canSection('content-type-builder'))
+                    <a href="{{ route('talos.content-type-builder.index') }}"
+                       class="sidebar-link {{ request()->is('*content-type-builder*') ? 'active' : '' }}">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                        </svg>
+                        Content-Type Builder
+                    </a>
+                @endif
 
-            <a href="{{ route('talos.components.index') }}"
-               class="sidebar-link {{ request()->is('*components*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-                Components
-            </a>
+                @if($canSection('components'))
+                    <a href="{{ route('talos.components.index') }}"
+                       class="sidebar-link {{ request()->is('*components*') ? 'active' : '' }}">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        Components
+                    </a>
+                @endif
+            @endif
 
-            <div class="my-3 border-t border-gray-800"></div>
+            {{-- Assets & Config --}}
+            @if($canSection('media') || $canSection('settings'))
+                <div class="my-3 border-t border-gray-800"></div>
+                <p class="px-3 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Assets & Config</p>
 
-            {{-- Media & Settings --}}
-            <p class="px-3 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Assets & Config</p>
+                @if($canSection('media'))
+                    <a href="{{ route('talos.media.index') }}"
+                       class="sidebar-link {{ request()->is('*media*') ? 'active' : '' }}">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Media Library
+                    </a>
+                @endif
 
-            <a href="{{ route('talos.media.index') }}"
-               class="sidebar-link {{ request()->is('*media*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Media Library
-            </a>
+                @if($canSection('settings'))
+                    <a href="{{ route('talos.settings.locales') }}"
+                       class="sidebar-link {{ request()->is('*settings/locales*') ? 'active' : '' }}">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                        </svg>
+                        Locales
+                    </a>
 
-            <a href="{{ route('talos.settings.locales') }}"
-               class="sidebar-link {{ request()->is('*settings/locales*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                </svg>
-                Locales
-            </a>
+                    <a href="{{ route('talos.settings.roles') }}"
+                       class="sidebar-link {{ request()->is('*settings/roles*') ? 'active' : '' }}">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Roles & Permissions
+                    </a>
 
-            <a href="{{ route('talos.settings.roles') }}"
-               class="sidebar-link {{ request()->is('*settings/roles*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                Roles & Permissions
-            </a>
+                    <a href="{{ route('talos.settings.users') }}"
+                       class="sidebar-link {{ request()->is('*settings/users*') ? 'active' : '' }}">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        Admin Users
+                    </a>
 
-            <a href="{{ route('talos.settings.users') }}"
-               class="sidebar-link {{ request()->is('*settings/users*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                Admin Users
-            </a>
-
-            <a href="{{ route('talos.settings.api-tokens') }}"
-               class="sidebar-link {{ request()->is('*settings/api-tokens*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-                API Tokens
-            </a>
+                    <a href="{{ route('talos.settings.api-tokens') }}"
+                       class="sidebar-link {{ request()->is('*settings/api-tokens*') ? 'active' : '' }}">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        API Tokens
+                    </a>
+                @endif
+            @endif
         </nav>
 
         {{-- User info --}}

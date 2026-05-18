@@ -91,7 +91,8 @@ class ContentManagerController extends Controller
         $data = $this->processFormData($request, $contentType['attributes'] ?? []);
 
         if ($contentType['options']['draftAndPublish'] ?? false) {
-            $data['published_at'] = $request->boolean('publish') ? now() : null;
+            $wantsPublish = $request->boolean('publish') && $this->canPublish($request, $uid);
+            $data['published_at'] = $wantsPublish ? now() : null;
         }
 
         if ($i18n) {
@@ -175,7 +176,8 @@ class ContentManagerController extends Controller
         $data = $this->processFormData($request, $contentType['attributes'] ?? []);
 
         if ($contentType['options']['draftAndPublish'] ?? false) {
-            $data['published_at'] = $request->boolean('publish') ? now() : null;
+            $wantsPublish = $request->boolean('publish') && $this->canPublish($request, $uid);
+            $data['published_at'] = $wantsPublish ? now() : null;
         }
 
         $data['updated_by'] = session('talos_user_id');
@@ -337,5 +339,22 @@ class ContentManagerController extends Controller
         }
 
         return $options;
+    }
+
+    private function canPublish(Request $request, string $uid): bool
+    {
+        $user = $request->attributes->get('talos_user');
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        $allowed = $user->role?->permissions['content-manager'][$uid] ?? [];
+
+        return in_array('publish', $allowed);
     }
 }

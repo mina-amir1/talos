@@ -49,9 +49,10 @@ class SettingsController extends Controller
 
     public function roles()
     {
-        $roles = TalosRole::withCount('users')->get();
+        $roles        = TalosRole::withCount('users')->get();
+        $contentTypes = app(\App\Services\ContentTypeService::class)->all();
 
-        return view('talos.settings.roles', compact('roles'));
+        return view('talos.settings.roles', compact('roles', 'contentTypes'));
     }
 
     public function storeRole(Request $request)

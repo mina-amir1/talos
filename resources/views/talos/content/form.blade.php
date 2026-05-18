@@ -869,6 +869,11 @@
 
     {{-- ── Sidebar (outside the main form to prevent nested-form issues) ── --}}
     <div class="w-64 space-y-4 sticky top-6">
+        @php
+            $navUser    = $talosUser ?? null;
+            $canPublish = $navUser?->is_super_admin
+                || in_array('publish', ($navUser?->role?->permissions['content-manager'][$uid] ?? []));
+        @endphp
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3">
             @if($draftable)
                 <div class="flex items-center justify-between">
@@ -880,15 +885,16 @@
                     @endif
                 </div>
                 <div class="space-y-2">
-                    {{-- form="content-form" submits the main form even though these buttons are outside it --}}
                     <button type="submit" form="content-form" name="publish" value="0"
                             class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-medium transition-colors">
-                        Save as draft
+                        {{ $canPublish ? 'Save as draft' : 'Save' }}
                     </button>
-                    <button type="submit" form="content-form" name="publish" value="1"
-                            class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors">
-                        {{ $isEdit ? 'Save & Publish' : 'Create & Publish' }}
-                    </button>
+                    @if($canPublish)
+                        <button type="submit" form="content-form" name="publish" value="1"
+                                class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors">
+                            {{ $isEdit ? 'Save & Publish' : 'Create & Publish' }}
+                        </button>
+                    @endif
                 </div>
             @else
                 <button type="submit" form="content-form"
