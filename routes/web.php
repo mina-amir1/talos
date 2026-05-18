@@ -61,10 +61,13 @@ Route::prefix($prefix)->name('talos.')->group(function () {
 
         // Media Library
         Route::prefix('media')->name('media.')->group(function () {
-            Route::get('/',        [MediaController::class, 'index'])->name('index');
-            Route::post('/upload', [MediaController::class, 'upload'])->name('upload');
-            Route::get('/{id}',    [MediaController::class, 'show'])->name('show');
-            Route::delete('/{id}', [MediaController::class, 'destroy'])->name('destroy');
+            Route::get('/',               [MediaController::class, 'index'])->name('index');
+            Route::post('/upload',        [MediaController::class, 'upload'])->name('upload');
+            Route::post('/folders',       [MediaController::class, 'storeFolder'])->name('folders.store');
+            Route::delete('/folders',     [MediaController::class, 'destroyFolder'])->name('folders.destroy');
+            Route::put('/{id}/move',      [MediaController::class, 'moveFile'])->name('move');
+            Route::get('/{id}',           [MediaController::class, 'show'])->name('show');
+            Route::delete('/{id}',        [MediaController::class, 'destroy'])->name('destroy');
         });
 
         // Settings
