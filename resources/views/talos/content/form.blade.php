@@ -284,7 +284,7 @@
                                                     Media Library
                                                     <span class="text-gray-500 text-sm font-normal" x-text="ids.length ? '(' + ids.length + ' selected)' : ''"></span>
                                                 </h3>
-                                                <button @click="show = false" class="text-gray-500 hover:text-white">
+                                                <button type="button" @click="show = false" class="text-gray-500 hover:text-white">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                     </svg>
@@ -353,7 +353,7 @@
                                         <div class="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
                                                 <h3 class="text-white font-semibold">Media Library</h3>
-                                                <button @click="show = false" class="text-gray-500 hover:text-white">
+                                                <button type="button" @click="show = false" class="text-gray-500 hover:text-white">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                     </svg>
@@ -502,7 +502,7 @@
                                                                             <div class="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                                 <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
                                                                                     <h3 class="text-white font-semibold">Media Library</h3>
-                                                                                    <button @click="_mshow = false" class="text-gray-500 hover:text-white">
+                                                                                    <button type="button" @click="_mshow = false" class="text-gray-500 hover:text-white">
                                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                                     </button>
                                                                                 </div>
@@ -610,7 +610,7 @@
                                                             <div class="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                 <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
                                                                     <h3 class="text-white font-semibold">Media Library</h3>
-                                                                    <button @click="_mshow = false" class="text-gray-500 hover:text-white">
+                                                                    <button type="button" @click="_mshow = false" class="text-gray-500 hover:text-white">
                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                     </button>
                                                                 </div>
@@ -805,7 +805,7 @@
                                                                         <div class="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
                                                                                 <h3 class="text-white font-semibold">Media Library</h3>
-                                                                                <button @click="_mshow = false" class="text-gray-500 hover:text-white">
+                                                                                <button type="button" @click="_mshow = false" class="text-gray-500 hover:text-white">
                                                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                                 </button>
                                                                             </div>
