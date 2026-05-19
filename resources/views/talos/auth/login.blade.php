@@ -1,68 +1,143 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-950">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sign in — {{ config('talos.admin_title', 'Talos CMS') }}</title>
     <link rel="icon" type="image/png" sizes="any" href="/logo.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            background: #f1f5f9;
+        }
+
+        .login-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+            border-radius: 1rem;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.625rem 1rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            color: #1e293b;
+            font-size: 0.875rem;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+            background: #ffffff;
+        }
+
+        .input-field::placeholder { color: #94a3b8; }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.625rem 1rem;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.2);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+            box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+        }
+
+        .btn-primary:active:not(:disabled) { transform: translateY(1px); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    </style>
 </head>
-<body class="h-full flex items-center justify-center">
-    <div class="w-full max-w-sm px-6">
+<body class="h-full flex items-center justify-center px-4">
+
+    <div class="w-full max-w-[400px]">
+
         {{-- Logo --}}
         <div class="text-center mb-8">
-{{--            <div class="inline-flex items-center justify-center w-14 h-14 bg-blue-600 rounded-2xl mb-4">--}}
-{{--                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">--}}
-{{--                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"--}}
-{{--                          d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />--}}
-{{--                </svg>--}}
-{{--            </div>--}}
-{{--            <h1 class="text-2xl font-bold text-white">Talos CMS</h1>--}}
-            <img src="{{ asset('/storage/logo.png') }}" style=" width: 320px;height: 200px;object-fit: cover;"/>
-            <p class="text-gray-500 text-sm mt-1">Sign in to the admin panel</p>
+            <img src="{{ asset('/storage/logo.png') }}"
+                 class="mx-auto"
+                 style="width:200px; height:120px; object-fit:contain;" />
+            <p class="text-sm text-slate-500 mt-3">Sign in to the admin panel</p>
         </div>
 
-        {{-- Error --}}
-        @if($errors->any())
-            <div class="mb-4 p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">
-                {{ $errors->first() }}
-            </div>
-        @endif
+        {{-- Card --}}
+        <div class="login-card px-8 py-8">
 
-        {{-- Form --}}
-        <form action="{{ route('talos.login.post') }}" method="POST" class="space-y-4" x-data="{ loading: false }" @submit="loading = true">
-            @csrf
+            {{-- Error --}}
+            @if($errors->any())
+                <div class="mb-5 flex items-start gap-2.5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                    <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                    <span>{{ $errors->first() }}</span>
+                </div>
+            @endif
 
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1.5" for="email">Email</label>
-                <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus
-                       class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500
-                              focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm">
-            </div>
+            {{-- Form --}}
+            <form action="{{ route('talos.login.post') }}" method="POST"
+                  class="space-y-5"
+                  x-data="{ loading: false }"
+                  @submit="loading = true">
+                @csrf
 
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1.5" for="password">Password</label>
-                <input id="password" name="password" type="password" required
-                       class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500
-                              focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm">
-            </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide" for="email">
+                        Email address
+                    </label>
+                    <input id="email" name="email" type="email"
+                           value="{{ old('email') }}" required autofocus
+                           placeholder="you@example.com"
+                           class="input-field">
+                </div>
 
-            <button type="submit"
-                    class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-                    :disabled="loading">
-                <svg x-show="loading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                </svg>
-                <span x-text="loading ? 'Signing in…' : 'Sign in'"></span>
-            </button>
-        </form>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide" for="password">
+                        Password
+                    </label>
+                    <input id="password" name="password" type="password"
+                           required placeholder="••••••••"
+                           class="input-field">
+                </div>
 
-        <p class="text-center text-gray-600 text-xs mt-8">
-            Talos CMS &mdash; Built By UpStrike
+                <button type="submit" class="btn-primary" :disabled="loading">
+                    <svg x-show="loading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="loading ? 'Signing in…' : 'Sign in'"></span>
+                </button>
+            </form>
+        </div>
+
+        <p class="text-center text-slate-400 text-xs mt-6">
+            Talos CMS &mdash; Built by UpStrike
         </p>
     </div>
+
 </body>
 </html>

@@ -8,6 +8,7 @@ use App\Services\ContentTypeService;
 use App\Services\DynamicModelService;
 use App\Services\LocaleService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class ContentManagerController extends Controller
@@ -87,8 +88,13 @@ class ContentManagerController extends Controller
             abort(404);
         }
 
-        $i18n = (bool) ($contentType['options']['i18n'] ?? false);
-        $data = $this->processFormData($request, $contentType['attributes'] ?? []);
+        $i18n       = (bool) ($contentType['options']['i18n'] ?? false);
+        $attributes = $contentType['attributes'] ?? [];
+        $data       = $this->processFormData($request, $attributes);
+
+        if ($fail = $this->validateContent($data, $attributes)) {
+            return $fail;
+        }
 
         if ($contentType['options']['draftAndPublish'] ?? false) {
             $wantsPublish = $request->boolean('publish') && $this->canPublish($request, $uid);
@@ -172,8 +178,13 @@ class ContentManagerController extends Controller
             abort(404);
         }
 
-        $i18n = (bool) ($contentType['options']['i18n'] ?? false);
-        $data = $this->processFormData($request, $contentType['attributes'] ?? []);
+        $i18n       = (bool) ($contentType['options']['i18n'] ?? false);
+        $attributes = $contentType['attributes'] ?? [];
+        $data       = $this->processFormData($request, $attributes);
+
+        if ($fail = $this->validateContent($data, $attributes)) {
+            return $fail;
+        }
 
         if ($contentType['options']['draftAndPublish'] ?? false) {
             $wantsPublish = $request->boolean('publish') && $this->canPublish($request, $uid);
@@ -339,6 +350,88 @@ class ContentManagerController extends Controller
         }
 
         return $options;
+    }
+
+    private function validateContent(array $data, array $attributes): ?\Illuminate\Http\RedirectResponse
+    {
+        $rules    = [];
+        $messages = [];
+
+        foreach ($attributes as $name => $field) {
+            $type = $field['type'] ?? '';
+
+            // Skip types that don't have simple scalar validation
+            if (in_array($type, ['media', 'relation', 'component', 'dynamiczone', 'richtext', 'json'])) {
+                continue;
+            }
+
+            if ($type === 'repeater') {
+                foreach ($field['subFields'] ?? [] as $subName => $subField) {
+                    $key      = "{$name}.*.{$subName}";
+                    $subRules = ($subField['required'] ?? false) ? ['required'] : ['nullable'];
+                    array_push($subRules, ...$this->typeRules($subField));
+                    $rules[$key] = implode('|', $subRules);
+
+                    if ($subField['required'] ?? false) {
+                        $messages["{$key}.required"] = "The \"{$subName}\" field is required in every {$name} row.";
+                        $messages["{$key}.in"]       = "The \"{$subName}\" value is not a valid option in every {$name} row.";
+                    }
+                }
+                continue;
+            }
+
+            $fieldRules = ($field['required'] ?? false) ? ['required'] : ['nullable'];
+            array_push($fieldRules, ...$this->typeRules($field));
+            $rules[$name] = implode('|', $fieldRules);
+        }
+
+        if (empty($rules)) {
+            return null;
+        }
+
+        $validator = Validator::make($data, $rules, $messages);
+
+        return $validator->fails()
+            ? back()->withErrors($validator)->withInput()
+            : null;
+    }
+
+    private function typeRules(array $field): array
+    {
+        $rules = [];
+        $type  = $field['type'] ?? '';
+
+        if ($type === 'email') {
+            $rules[] = 'email';
+        } elseif (in_array($type, ['integer', 'biginteger'])) {
+            $rules[] = 'integer';
+        } elseif (in_array($type, ['decimal', 'float'])) {
+            $rules[] = 'numeric';
+        } elseif ($type === 'boolean') {
+            $rules[] = 'boolean';
+        } elseif (in_array($type, ['date', 'datetime'])) {
+            $rules[] = 'date';
+        } elseif ($type === 'url') {
+            $rules[] = 'url';
+        }
+
+        if ($type === 'string' && ! empty($field['maxLength'])) {
+            $rules[] = 'max:' . (int) $field['maxLength'];
+        }
+
+        if ($type === 'enumeration' && ! empty($field['enumValues'])) {
+            $values = array_filter(array_map('trim', explode("\n", $field['enumValues'])));
+            if (! empty($values)) {
+                $rules[] = 'in:' . implode(',', $values);
+            }
+        }
+
+        if (in_array($type, ['integer', 'biginteger', 'decimal', 'float'])) {
+            if (isset($field['min'])) $rules[] = 'min:' . $field['min'];
+            if (isset($field['max'])) $rules[] = 'max:' . $field['max'];
+        }
+
+        return $rules;
     }
 
     private function canPublish(Request $request, string $uid): bool
