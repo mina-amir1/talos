@@ -133,7 +133,7 @@ ask() {
     local hint=''
     [[ -n "$default" ]] && hint=" ${DIM}[${default}]${RESET}"
     printf "  ${BOLD}%s${RESET}%b: " "$prompt" "$hint"
-    read -r _input
+    read -r _input </dev/tty
     local value="${_input:-$default}"
     [[ -z "$value" ]] && fail "\"$prompt\" is required."
     printf -v "$var_name" '%s' "$value"
@@ -144,14 +144,14 @@ ask_optional() {
     local hint=''
     [[ -n "$default" ]] && hint=" ${DIM}[${default}]${RESET}"
     printf "  ${BOLD}%s${RESET}%b: " "$prompt" "$hint"
-    read -r _input
+    read -r _input </dev/tty
     printf -v "$var_name" '%s' "${_input:-$default}"
 }
 
 ask_secret() {
     local prompt="$1" var_name="$2"
     printf "  ${BOLD}%s${RESET}: " "$prompt"
-    read -rs _sec; echo
+    read -rs _sec </dev/tty; echo
     [[ -z "$_sec" ]] && fail "\"$prompt\" cannot be empty."
     printf -v "$var_name" '%s' "$_sec"
 }
@@ -160,7 +160,7 @@ confirm() {
     local prompt="$1" default="${2:-y}"
     local yn='[Y/n]'; [[ "$default" == "n" ]] && yn='[y/N]'
     printf "  ${BOLD}%s${RESET} ${DIM}%s${RESET}: " "$prompt" "$yn"
-    read -r _ans
+    read -r _ans </dev/tty
     _ans="${_ans:-$default}"
     [[ "$_ans" =~ ^[Yy] ]]
 }
@@ -175,7 +175,7 @@ choose() {
     done
     while true; do
         printf "  Choice [1-%d]: " "${#opts[@]}"
-        read -r _c
+        read -r _c </dev/tty
         if [[ "$_c" =~ ^[0-9]+$ ]] && (( _c >= 1 && _c <= ${#opts[@]} )); then
             printf -v "$var_name" '%s' "${opts[$((_c-1))]}"
             return
@@ -362,7 +362,7 @@ echo -e "    ${DIM}1.${RESET} Let's Encrypt (free, auto-renewing) ${GREEN}← re
 echo -e "    ${DIM}2.${RESET} Self-signed (instant, browser warning)"
 echo -e "    ${DIM}3.${RESET} Skip SSL (HTTP only)"
 printf "  Choice [1-3]: "
-read -r _ssl_choice
+read -r _ssl_choice </dev/tty
 case "${_ssl_choice:-1}" in
     1)
         if ! $DOMAIN_RESOLVES; then
