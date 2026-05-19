@@ -218,11 +218,26 @@ get_server_ip() {
 domain_resolves_here() {
     local domain="$1"
     local server_ip; server_ip=$(get_server_ip)
-    local domain_ip
-    domain_ip=$(getent hosts "$domain" 2>/dev/null | awk '{print $1}' | head -1 || true)
-    if [[ -z "$domain_ip" ]] && command -v dig &>/dev/null; then
-        domain_ip=$(dig +short "$domain" 2>/dev/null | grep -E '^[0-9]+\.' | tail -1 || true)
+    local domain_ip=''
+
+    # Try multiple resolution methods in order
+    if command -v dig &>/dev/null; then
+        domain_ip=$(dig +short "$domain" A 2>/dev/null | grep -E '^[0-9]+\.' | head -1 || true)
     fi
+    if [[ -z "$domain_ip" ]] && command -v host &>/dev/null; then
+        domain_ip=$(host -t A "$domain" 2>/dev/null | awk '/has address/{print $NF}' | head -1 || true)
+    fi
+    if [[ -z "$domain_ip" ]] && command -v nslookup &>/dev/null; then
+        domain_ip=$(nslookup "$domain" 2>/dev/null | awk '/^Address: /{print $2}' | grep -v '#' | head -1 || true)
+    fi
+    if [[ -z "$domain_ip" ]]; then
+        domain_ip=$(getent hosts "$domain" 2>/dev/null | awk '{print $1}' | grep -E '^[0-9]+\.' | head -1 || true)
+    fi
+    # Last resort: try an HTTP request and check if it reaches this server
+    if [[ -z "$domain_ip" ]]; then
+        domain_ip=$(curl -s --max-time 5 --resolve "${domain}:80:${server_ip}" "http://${domain}/" -o /dev/null -w "%{remote_ip}" 2>/dev/null || true)
+    fi
+
     [[ -n "$domain_ip" && "$domain_ip" == "$server_ip" ]]
 }
 
