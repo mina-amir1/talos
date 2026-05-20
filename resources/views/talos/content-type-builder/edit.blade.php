@@ -726,8 +726,8 @@ function fieldBuilder(initialAttributes, uid) {
 
         backToPicker() { this.modal = 'picker'; this.editingField = null; this.editingIndex = null; },
 
-        removeField(index) {
-            if (confirm('Remove this field? This cannot be undone.')) this.fields.splice(index, 1);
+        async removeField(index) {
+            if (await talos.confirm('Remove this field? This cannot be undone.')) this.fields.splice(index, 1);
         },
 
         toggleComponent(uid) {
@@ -739,7 +739,7 @@ function fieldBuilder(initialAttributes, uid) {
         addOrUpdateField() {
             if (!this.editingField?.name) return;
             if (this.fields.some((f, i) => f.name === this.editingField.name && i !== this.editingIndex)) {
-                alert('A field with this name already exists.');
+                talos.toast('A field with this name already exists.', 'error');
                 return;
             }
 
@@ -771,7 +771,7 @@ function fieldBuilder(initialAttributes, uid) {
             const n = this.newSubFieldName.trim();
             if (!n) return;
             if (!this.editingField.subFields) this.editingField.subFields = {};
-            if (this.editingField.subFields[n]) { alert('Sub-field "' + n + '" already exists.'); return; }
+            if (this.editingField.subFields[n]) { talos.toast('Sub-field "' + n + '" already exists.', 'error'); return; }
             this.editingField.subFields = { ...this.editingField.subFields, [n]: { type: this.newSubFieldType, ...this.newSubFieldConfig } };
             this.newSubFieldName = '';
             this.newSubFieldConfig = {};
@@ -794,27 +794,17 @@ function fieldBuilder(initialAttributes, uid) {
                 const data = await r.json();
                 if (data.success) {
                     this.renames = {};
-                    this.toast('Schema saved!', 'ok');
+                    talos.toast('Schema saved!', 'success');
                 } else {
-                    this.toast(data.error || 'Unknown error', 'err');
+                    talos.toast(data.error || 'Unknown error', 'error');
                 }
             } catch {
-                this.toast('Network error — please try again.', 'err');
+                talos.toast('Network error — please try again.', 'error');
             } finally {
                 this.saving = false;
             }
         },
 
-        toast(msg, type) {
-            const el = document.createElement('div');
-            el.className = `fixed bottom-6 right-6 z-[100] flex items-center gap-2.5 px-5 py-3 rounded-xl shadow-2xl text-sm font-medium
-                ${type === 'ok' ? 'bg-emerald-700 text-white' : 'bg-red-700 text-white'}`;
-            el.innerHTML = type === 'ok'
-                ? `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>${msg}`
-                : `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>${msg}`;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 3500);
-        },
     };
 }
 </script>

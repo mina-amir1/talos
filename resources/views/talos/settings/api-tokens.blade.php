@@ -84,7 +84,7 @@
                             </div>
 
                             <form action="{{ route('talos.settings.api-tokens.destroy', $token->id) }}"
-                                  method="POST" onsubmit="return confirm('Revoke this token?')" class="flex-shrink-0">
+                                  method="POST" data-confirm=\"Revoke this token?\" class="flex-shrink-0">
                                 @csrf @method('DELETE')
                                 <button type="submit"
                                         class="text-slate-400 hover:text-red-600 transition-colors px-3 py-1 text-xs border border-slate-300 hover:border-red-200 rounded-lg">

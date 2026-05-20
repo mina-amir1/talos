@@ -45,7 +45,7 @@
                                     </svg>
                                 </div>
                                 <form action="{{ route('talos.components.destroy', ['uid' => $component['__uid']]) }}"
-                                      method="POST" onsubmit="return confirm('Delete this component?')">
+                                      method="POST" data-confirm="Delete this component?">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-slate-400 hover:text-red-600 transition-colors p-1">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

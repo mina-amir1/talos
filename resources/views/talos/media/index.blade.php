@@ -82,7 +82,7 @@
 
                 <form action="{{ route('talos.media.folders.destroy') }}" method="POST"
                       class="ml-auto"
-                      onsubmit="return confirm('Delete folder \'{{ addslashes(basename($folder)) }}\'? Files inside will be moved to the parent.')">
+                      data-confirm="Delete folder '{{ addslashes(basename($folder)) }}'? Files inside will be moved to the parent.">
                     @csrf @method('DELETE')
                     <input type="hidden" name="path" value="{{ $folder }}">
                     <button type="submit" class="text-xs text-slate-400 hover:text-red-600 transition-colors">Delete folder</button>
@@ -152,7 +152,7 @@
                             <p class="text-xs text-slate-400">{{ $f['count'] }} file(s)</p>
                         </a>
                         <form action="{{ route('talos.media.folders.destroy') }}" method="POST"
-                              onsubmit="return confirm('Delete folder \'{{ addslashes($f['name']) }}\' and all its contents? This cannot be undone.')">
+                              data-confirm="Delete folder '{{ addslashes($f['name']) }}' and all its contents? This cannot be undone.">
                             @csrf @method('DELETE')
                             <input type="hidden" name="path" value="{{ $f['path'] }}">
                             <button type="submit"
@@ -234,7 +234,8 @@
                     <div class="group relative bg-white border border-slate-200 rounded-xl overflow-hidden transition-colors cursor-pointer"
                          :class="selected.includes({{ $file->id }}) ? 'border-blue-500 ring-2 ring-blue-500/40' : 'hover:border-slate-300'"
                          x-data="{ moving: false }"
-                         @click="toggleSelect({{ $file->id }})">
+                         @click="toggleSelect({{ $file->id }})"
+                         @if($file->status === 'converting') data-converting-id="{{ $file->id }}" @endif>
 
                         {{-- Checkbox --}}
                         <div class="absolute top-2 left-2 z-10"
@@ -246,7 +247,8 @@
                         </div>
 
                         @if($file->status === 'converting')
-                            <div class="absolute top-2 right-2 z-10 flex items-center gap-1 bg-amber-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                            <div data-badge="converting"
+                                 class="absolute top-2 right-2 z-10 flex items-center gap-1 bg-amber-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
                                 <svg class="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -256,7 +258,8 @@
                         @endif
 
                         @if($file->isImage())
-                            <div class="aspect-square overflow-hidden {{ $file->status === 'converting' ? 'opacity-60' : '' }}">
+                            <div data-img-wrapper
+                                 class="aspect-square overflow-hidden {{ $file->status === 'converting' ? 'opacity-60' : '' }}">
                                 <img src="{{ $file->url }}" alt="{{ $file->name }}"
                                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
                             </div>
@@ -383,7 +386,7 @@ function mediaLibrary() {
         },
 
         async deleteFile(id, card) {
-            if (!confirm('Delete this file?')) return;
+            if (!await talos.confirm('Delete this file?')) return;
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
             const r = await fetch(`{{ url(config('talos.admin_prefix', 'talos') . '/media') }}/${id}`, {
                 method: 'DELETE',
@@ -394,7 +397,7 @@ function mediaLibrary() {
 
         async bulkDelete() {
             if (!this.selected.length) return;
-            if (!confirm(`Delete ${this.selected.length} file(s)? This cannot be undone.`)) return;
+            if (!await talos.confirm(`Delete ${this.selected.length} file(s)? This cannot be undone.`)) return;
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
             await Promise.all(this.selected.map(id =>
                 fetch(`{{ url(config('talos.admin_prefix', 'talos') . '/media') }}/${id}`, {
@@ -434,6 +437,40 @@ function mediaLibrary() {
                 })
             ));
             window.location.reload();
+        },
+
+        init() {
+            this.pollConverting();
+        },
+
+        pollConverting() {
+            const base    = '{{ url(config('talos.admin_prefix', 'talos') . '/media') }}';
+            const maxWait = 5 * 60 * 1000; // stop polling after 5 minutes
+            const started = Date.now();
+
+            const interval = setInterval(async () => {
+                const cards = [...document.querySelectorAll('[data-converting-id]')];
+
+                if (!cards.length || Date.now() - started > maxWait) {
+                    clearInterval(interval);
+                    return;
+                }
+
+                await Promise.all(cards.map(async card => {
+                    const id = card.dataset.convertingId;
+                    try {
+                        const res  = await fetch(`${base}/${id}`, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (data.data?.status === 'ready') {
+                            card.querySelector('[data-badge="converting"]')?.remove();
+                            card.querySelector('[data-img-wrapper]')?.classList.remove('opacity-60');
+                            const img = card.querySelector('img');
+                            if (img && data.data.url) img.src = data.data.url + '?v=' + Date.now();
+                            delete card.dataset.convertingId;
+                        }
+                    } catch {}
+                }));
+            }, 3000);
         },
     };
 }

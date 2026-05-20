@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\StorageSettings;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 class TalosMedia extends Model
 {
@@ -21,7 +21,7 @@ class TalosMedia extends Model
 
     public function getUrlAttribute(): string
     {
-        return asset('storage/' . $this->path);
+        return app(StorageSettings::class)->mediaUrl($this->path);
     }
 
     public function uploader()

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ContentTypeController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\StorageSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => redirect()->route('talos.dashboard'));
@@ -88,6 +89,21 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::get('api-tokens',         [SettingsController::class, 'apiTokens'])->name('api-tokens');
             Route::post('api-tokens',        [SettingsController::class, 'storeApiToken'])->name('api-tokens.store');
             Route::delete('api-tokens/{id}', [SettingsController::class, 'destroyApiToken'])->name('api-tokens.destroy');
+
+            // Storage (super admin only — enforced in controller)
+            Route::get('storage',                     [StorageSettingsController::class, 'storage'])->name('storage');
+            Route::post('storage',                    [StorageSettingsController::class, 'saveStorage'])->name('storage.save');
+            Route::post('storage/toggle',             [StorageSettingsController::class, 'toggleStorage'])->name('storage.toggle');
+            Route::post('storage/test',               [StorageSettingsController::class, 'testStorage'])->name('storage.test');
+            Route::post('storage/migrate',            [StorageSettingsController::class, 'startMigration'])->name('storage.migrate');
+            Route::get('storage/migration-status',    [StorageSettingsController::class, 'migrationStatus'])->name('storage.migration-status');
+
+            // Backup (super admin only — enforced in controller)
+            Route::get('backup',                      [StorageSettingsController::class, 'backup'])->name('backup');
+            Route::post('backup',                     [StorageSettingsController::class, 'saveBackup'])->name('backup.save');
+            Route::post('backup/test',                [StorageSettingsController::class, 'testBackup'])->name('backup.test');
+            Route::post('backup/trigger',             [StorageSettingsController::class, 'triggerBackup'])->name('backup.trigger');
+            Route::delete('backup',                   [StorageSettingsController::class, 'deleteBackup'])->name('backup.delete');
         });
     });
 });

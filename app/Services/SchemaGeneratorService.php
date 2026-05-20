@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Str;
 
 class SchemaGeneratorService
 {
@@ -75,7 +76,7 @@ class SchemaGeneratorService
 
             foreach ($attributes as $name => $field) {
                 if (! Schema::hasColumn($table, $name) && ! in_array($name, $renamedTargets)) {
-                    $this->addColumn($bp, $name, array_merge($field, ['required' => false]));
+                    $this->addColumn($bp, $name, $field);
                 }
             }
 
@@ -84,6 +85,11 @@ class SchemaGeneratorService
                 $bp->unsignedBigInteger('localizations_id')->nullable()->index();
             }
         });
+
+        // Step 3: Make any existing NOT NULL schema columns nullable.
+        // Required validation is enforced in PHP — NOT NULL at the DB level causes
+        // constraint violations when optional fields are left blank.
+        $this->ensureColumnsNullable($table, $attributes);
     }
 
     /**
@@ -156,7 +162,8 @@ class SchemaGeneratorService
                 => $bp->string($name, 255),
         };
 
-        if (! $required && $type !== 'boolean') {
+        // Always nullable — required validation is enforced at the PHP/controller level.
+        if ($type !== 'boolean') {
             $col->nullable();
         }
 
@@ -167,5 +174,52 @@ class SchemaGeneratorService
         if (isset($field['default']) && $type !== 'boolean') {
             $col->default($field['default']);
         }
+    }
+
+    private function ensureColumnsNullable(string $table, array $attributes): void
+    {
+        // PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
+        $notNullCols = collect(DB::select("PRAGMA table_info(\"{$table}\")"))
+            ->where('notnull', 1)
+            ->pluck('name')
+            ->all();
+
+        $toFix = array_intersect(array_keys($attributes), $notNullCols);
+
+        if (empty($toFix)) {
+            return;
+        }
+
+        Schema::table($table, function (Blueprint $bp) use ($attributes, $toFix) {
+            foreach ($toFix as $name) {
+                $field = $attributes[$name];
+                $type  = $field['type'] ?? 'string';
+
+                if ($type === 'boolean') {
+                    continue; // boolean has a default — fine as NOT NULL
+                }
+
+                $col = match ($type) {
+                    'string', 'email', 'password', 'url', 'uid', 'enumeration'
+                        => $bp->string($name, $field['maxLength'] ?? 255),
+                    'text'        => $bp->text($name),
+                    'richtext'    => $bp->longText($name),
+                    'integer'     => $bp->integer($name),
+                    'biginteger'  => $bp->bigInteger($name),
+                    'decimal'     => $bp->decimal($name, $field['precision'] ?? 10, $field['scale'] ?? 2),
+                    'float'       => $bp->float($name),
+                    'date'        => $bp->date($name),
+                    'datetime'    => $bp->dateTime($name),
+                    'time'        => $bp->time($name),
+                    'json', 'component', 'dynamiczone', 'media', 'repeater' => $bp->json($name),
+                    'relation'    => in_array($field['relation'] ?? 'manyToOne', ['oneToMany', 'manyToMany'])
+                        ? $bp->json($name)
+                        : $bp->unsignedBigInteger($name),
+                    default       => $bp->string($name, 255),
+                };
+
+                $col->nullable()->change();
+            }
+        });
     }
 }

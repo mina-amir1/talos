@@ -269,13 +269,13 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType') {
         },
 
         editField(i){ this.editingField={...this.fields[i]}; this.editingIndex=i; this.showPicker=false; },
-        removeField(i){ if(confirm('Remove?'))this.fields.splice(i,1); },
+        async removeField(i){ if(await talos.confirm('Remove this field?'))this.fields.splice(i,1); },
         cancelEdit(){ this.editingField=null; this.editingIndex=null; },
 
         addOrUpdateField(){
             if(!this.editingField.name)return;
             const dup=this.fields.some((f,i)=>f.name===this.editingField.name&&i!==this.editingIndex);
-            if(dup){alert('Name already exists.');return;}
+            if(dup){talos.toast('Name already exists.','error');return;}
             if(this.editingIndex!==null)this.fields[this.editingIndex]={...this.editingField};
             else this.fields.push({...this.editingField});
             this.cancelEdit();
@@ -289,7 +289,7 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType') {
             const n=this.newSubFieldName.trim();
             if(!n)return;
             if(!this.editingField.subFields)this.editingField.subFields={};
-            if(this.editingField.subFields[n]){alert('Sub-field "'+n+'" already exists.');return;}
+            if(this.editingField.subFields[n]){talos.toast('Sub-field "'+n+'" already exists.','error');return;}
             const fieldDef={type:this.newSubFieldType,...this.newSubFieldConfig};
             this.editingField.subFields={...this.editingField.subFields,[n]:fieldDef};
             this.newSubFieldName='';
@@ -309,14 +309,9 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType') {
             try{
                 const r=await fetch(route,{method:'PUT',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},body:JSON.stringify({attributes:toObj(this.fields)})});
                 const d=await r.json();
-                if(d.success){
-                    const el=document.createElement('div');
-                    el.className='fixed bottom-6 right-6 bg-green-700 text-white px-5 py-3 rounded-lg shadow-xl text-sm font-medium z-50';
-                    el.textContent='Saved successfully!';
-                    document.body.appendChild(el);
-                    setTimeout(()=>el.remove(),3000);
-                }else alert('Error: '+(d.error||'Unknown'));
-            }catch(e){alert('Network error.');}
+                if(d.success){talos.toast('Saved successfully!','success');}
+                else talos.toast('Error: '+(d.error||'Unknown'),'error');
+            }catch(e){talos.toast('Network error.','error');}
             this.saving=false;
         }
     };

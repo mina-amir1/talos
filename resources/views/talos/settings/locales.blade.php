@@ -26,7 +26,7 @@
                     </div>
                     @if($locale !== $defaultLocale)
                         <form action="{{ route('talos.settings.locales.destroy', $locale) }}" method="POST"
-                              onsubmit="return confirm('Remove locale {{ strtoupper($locale) }}? Existing entries in this locale will remain in the database.')">
+                              data-confirm="Remove locale {{ strtoupper($locale) }}? Existing entries in this locale will remain in the database.">
                             @csrf @method('DELETE')
                             <button type="submit" class="text-xs text-slate-400 hover:text-red-600 transition-colors">Remove</button>
                         </form>

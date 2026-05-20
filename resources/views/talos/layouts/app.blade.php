@@ -253,6 +253,25 @@
                             </svg>
                             API Tokens
                         </a>
+
+                        @if($isSA)
+                        <a href="{{ route('talos.settings.storage') }}"
+                           class="sidebar-link {{ request()->is('*settings/storage*') ? 'active' : '' }}">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                            </svg>
+                            Storage
+                        </a>
+                        <a href="{{ route('talos.settings.backup') }}"
+                           class="sidebar-link {{ request()->is('*settings/backup*') ? 'active' : '' }}">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                            </svg>
+                            Backup
+                        </a>
+                        @endif
                     @endif
                 </div>
             @endif
@@ -359,5 +378,98 @@
 </div>
 
 @stack('scripts')
+
+{{-- Toast container --}}
+<div id="talos-toasts" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none" style="min-width:280px;max-width:360px"></div>
+
+{{-- Confirm modal --}}
+<div id="talos-confirm-backdrop"
+     class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+        <p id="talos-confirm-message" class="text-sm text-slate-700 leading-relaxed mb-5"></p>
+        <div class="flex justify-end gap-2">
+            <button id="talos-confirm-cancel"
+                    class="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">
+                Cancel
+            </button>
+            <button id="talos-confirm-ok"
+                    class="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+window.talos = (() => {
+    // ── Toast ────────────────────────────────────────────────────────────────
+    function toast(message, type = 'info') {
+        const colors = {
+            success: 'border-emerald-400 bg-emerald-50 text-emerald-800',
+            error:   'border-red-400 bg-red-50 text-red-800',
+            info:    'border-blue-400 bg-blue-50 text-blue-800',
+            warning: 'border-amber-400 bg-amber-50 text-amber-800',
+        };
+        const icons = {
+            success: `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`,
+            error:   `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`,
+            info:    `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 110 20A10 10 0 0112 2z"/></svg>`,
+            warning: `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>`,
+        };
+
+        const el = document.createElement('div');
+        el.className = `pointer-events-auto flex items-start gap-2.5 border rounded-xl px-4 py-3 shadow-lg text-sm font-medium
+                        transition-all duration-300 translate-x-0 opacity-100 ${colors[type] ?? colors.info}`;
+        el.innerHTML = (icons[type] ?? icons.info) + `<span>${message}</span>`;
+
+        const container = document.getElementById('talos-toasts');
+        container.appendChild(el);
+
+        // Animate out after 4s
+        setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateX(20px)';
+            setTimeout(() => el.remove(), 300);
+        }, 4000);
+    }
+
+    // ── Confirm ──────────────────────────────────────────────────────────────
+    let _confirmResolve = null;
+
+    const backdrop = document.getElementById('talos-confirm-backdrop');
+    const msgEl    = document.getElementById('talos-confirm-message');
+    const okBtn    = document.getElementById('talos-confirm-ok');
+    const cancelBtn = document.getElementById('talos-confirm-cancel');
+
+    function closeConfirm(result) {
+        backdrop.classList.add('hidden');
+        if (_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
+    }
+
+    okBtn.addEventListener('click',     () => closeConfirm(true));
+    cancelBtn.addEventListener('click', () => closeConfirm(false));
+    backdrop.addEventListener('click',  (e) => { if (e.target === backdrop) closeConfirm(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeConfirm(false); });
+
+    function confirm(message, { confirmLabel = 'Confirm', danger = true } = {}) {
+        msgEl.textContent = message;
+        okBtn.textContent = confirmLabel;
+        okBtn.className = `px-4 py-2 text-sm font-medium text-white rounded-lg ${danger ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'}`;
+        backdrop.classList.remove('hidden');
+        return new Promise(resolve => { _confirmResolve = resolve; });
+    }
+
+    // ── Form data-confirm interception ───────────────────────────────────────
+    document.addEventListener('submit', async function (e) {
+        const msg = e.target.dataset.confirm;
+        if (!msg) return;
+        e.preventDefault();
+        const ok = await confirm(msg);
+        if (ok) { e.target.dataset.confirm = ''; e.target.submit(); }
+    });
+
+    return { toast, confirm };
+})();
+</script>
 </body>
 </html>

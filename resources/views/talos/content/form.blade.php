@@ -1001,7 +1001,7 @@
 
             {{-- Delete form is its own top-level form — no nesting risk --}}
             <form action="{{ route('talos.content.destroy', ['uid' => $uid, 'id' => $entry->id]) }}"
-                  method="POST" onsubmit="return confirm('Delete this entry permanently?')">
+                  method="POST" data-confirm="Delete this entry permanently?">
                 @csrf @method('DELETE')
                 <button type="submit"
                         class="w-full py-2 bg-red-900/30 hover:bg-red-900/50 text-red-600 rounded-lg text-sm font-medium transition-colors border border-red-900">

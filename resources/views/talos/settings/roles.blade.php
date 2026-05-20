@@ -51,7 +51,7 @@
                         </button>
 
                         <form action="{{ route('talos.settings.roles.destroy', $role->id) }}"
-                              method="POST" onsubmit="return confirm('Delete role {{ addslashes($role->name) }}? Users with this role will lose all permissions.')">
+                              method="POST" data-confirm="Delete role {{ addslashes($role->name) }}? Users with this role will lose all permissions.">
                             @csrf @method('DELETE')
                             <button type="submit" class="p-1.5 text-slate-400 hover:text-red-600 transition-colors" title="Delete role">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

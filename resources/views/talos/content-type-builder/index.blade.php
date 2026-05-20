@@ -34,7 +34,7 @@
                                     <span class="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">D&P</span>
                                 @endif
                                 <form action="{{ route('talos.content-type-builder.destroy', ['uid' => $type['__uid']]) }}"
-                                      method="POST" onsubmit="return confirm('Delete this content type and ALL its data?')">
+                                      method="POST" data-confirm="Delete this content type and ALL its data?">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-slate-400 hover:text-red-600 transition-colors p-1">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,7 +86,7 @@
                                 </svg>
                             </div>
                             <form action="{{ route('talos.content-type-builder.destroy', ['uid' => $type['__uid']]) }}"
-                                  method="POST" onsubmit="return confirm('Delete?')">
+                                  method="POST" data-confirm="Delete?">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="text-slate-400 hover:text-red-600 transition-colors p-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

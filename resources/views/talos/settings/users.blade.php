@@ -35,7 +35,7 @@
                         <td class="px-5 py-3.5">
                             @if(!$user->is_super_admin)
                                 <form action="{{ route('talos.settings.users.destroy', $user->id) }}"
-                                      method="POST" onsubmit="return confirm('Delete user?')">
+                                      method="POST" data-confirm="Delete user?">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-slate-400 hover:text-red-600 p-1">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

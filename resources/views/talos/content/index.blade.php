@@ -145,7 +145,7 @@
                                         </svg>
                                     </a>
                                     <form action="{{ route('talos.content.destroy', ['uid' => $uid, 'id' => $entry->id]) }}"
-                                          method="POST" onsubmit="return confirm('Delete this entry?')">
+                                          method="POST" data-confirm="Delete this entry?">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-slate-400 hover:text-red-600 transition-colors p-1">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

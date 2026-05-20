@@ -5,15 +5,16 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\ConvertImageToWebp;
 use App\Models\TalosMedia;
+use App\Services\StorageSettings;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MediaController extends Controller
 {
-    private function disk(): string
+    private function disk(): Filesystem
     {
-        return config('talos.media_disk', 'public');
+        return app(StorageSettings::class)->mediaDisk();
     }
 
     private function baseDir(): string
@@ -34,18 +35,47 @@ class MediaController extends Controller
         $dir     = $this->storageDir($folder);
 
         // Immediate subdirectories
-        $rawDirs = Storage::disk($disk)->directories($dir);
+        $rawDirs = $disk->directories($dir);
         $folders = array_map(fn($d) => [
             'name'  => basename($d),
             'path'  => $folder ? $folder . '/' . basename($d) : basename($d),
-            'count' => count(Storage::disk($disk)->files($d)),
+            'count' => count($disk->files($d)),
         ], $rawDirs);
 
-        // All directories (for sidebar tree)
-        $allDirs = array_map(
-            fn($d) => trim(Str::after($d, $this->baseDir() . '/'), '/'),
-            Storage::disk($disk)->allDirectories($this->baseDir())
-        );
+        // All directories (for sidebar tree).
+        // Combine disk listing + DB-derived paths so the tree is always accurate,
+        // even when R2 has no explicit directory objects or the disk is unreachable.
+        try {
+            $diskDirs = array_map(
+                fn($d) => trim(Str::after($d, $this->baseDir() . '/'), '/'),
+                $disk->allDirectories($this->baseDir())
+            );
+        } catch (\Throwable) {
+            $diskDirs = [];
+        }
+
+        $dbDirs = TalosMedia::whereNotNull('folder')
+            ->distinct()
+            ->pluck('folder')
+            ->flatMap(function ($f) {
+                // Expand each folder path into all ancestor segments
+                $parts = explode('/', $f);
+                $paths = [];
+                $built = '';
+                foreach ($parts as $part) {
+                    $built   = $built ? $built . '/' . $part : $part;
+                    $paths[] = $built;
+                }
+                return $paths;
+            })
+            ->all();
+
+        $allDirs = collect(array_merge($diskDirs, $dbDirs))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
 
         // Files in this folder from DB (no folder filter = show all assets)
         $query = TalosMedia::when($folder !== '', fn($q) => $q->where('folder', $folder))->latest();
@@ -92,7 +122,7 @@ class MediaController extends Controller
 
         $ext        = strtolower($file->getClientOriginalExtension());
         $filename   = $hash . '.' . $ext;
-        $storedPath = $file->storeAs($dir, $filename, $disk);
+        $storedPath = $disk->putFileAs($dir, $file, $filename);
         $size       = $file->getSize();
 
         $media = TalosMedia::create([
@@ -111,7 +141,7 @@ class MediaController extends Controller
         ]);
 
         if ($willConvert) {
-            ConvertImageToWebp::dispatch($media->id, $disk);
+            ConvertImageToWebp::dispatch($media->id);
         }
 
         return response()->json(['data' => $media]);
@@ -128,7 +158,7 @@ class MediaController extends Controller
         $name    = Str::slug($request->input('name'), '-');
         $newPath = $parent ? $parent . '/' . $name : $name;
 
-        Storage::disk($this->disk())->makeDirectory($this->storageDir($newPath));
+        $this->disk()->makeDirectory($this->storageDir($newPath));
 
         return redirect()
             ->route('talos.media.index', array_filter(['path' => $parent]))
@@ -149,11 +179,11 @@ class MediaController extends Controller
             ->get();
 
         foreach ($affected as $media) {
-            Storage::disk($disk)->delete($media->path);
+            $disk->delete($media->path);
             $media->delete();
         }
 
-        Storage::disk($disk)->deleteDirectory($this->storageDir($folder));
+        $disk->deleteDirectory($this->storageDir($folder));
 
         return redirect()
             ->route('talos.media.index', array_filter(['path' => $parent]))
@@ -170,7 +200,7 @@ class MediaController extends Controller
         $filename  = basename($media->path);
         $newPath   = $this->storageDir($newFolder) . '/' . $filename;
 
-        Storage::disk($disk)->move($media->path, $newPath);
+        $disk->move($media->path, $newPath);
 
         $media->update([
             'path'   => $newPath,
@@ -185,7 +215,7 @@ class MediaController extends Controller
     {
         $media = TalosMedia::findOrFail($id);
 
-        Storage::disk($this->disk())->delete($media->path);
+        $this->disk()->delete($media->path);
         $media->delete();
 
         if (request()->wantsJson()) {
