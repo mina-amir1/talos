@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ConvertImageToWebp;
 use App\Models\TalosMedia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\Laravel\Facades\Image;
 
 class MediaController extends Controller
 {
@@ -85,29 +85,15 @@ class MediaController extends Controller
             return response()->json(['data' => $existing]);
         }
 
-        $isImage = str_starts_with($file->getMimeType(), 'image/');
+        $mimeType      = $file->getMimeType();
+        $isImage       = str_starts_with($mimeType, 'image/');
+        // SVGs are vector — store as-is, no conversion
+        $willConvert   = $isImage && $mimeType !== 'image/svg+xml';
 
-        if ($isImage) {
-            $image      = Image::read($file->getRealPath());
-            $width      = $image->width();
-            $height     = $image->height();
-            $encoded    = (string) $image->toWebp(85);
-            $filename   = $hash . '.webp';
-            $storedPath = $dir . '/' . $filename;
-            $ext        = 'webp';
-            $mimeType   = 'image/webp';
-
-            Storage::disk($disk)->put($storedPath, $encoded);
-            $size = Storage::disk($disk)->size($storedPath);
-        } else {
-            $ext        = strtolower($file->getClientOriginalExtension());
-            $filename   = $hash . '.' . $ext;
-            $storedPath = $file->storeAs($dir, $filename, $disk);
-            $mimeType   = $file->getMimeType();
-            $size       = $file->getSize();
-            $width      = null;
-            $height     = null;
-        }
+        $ext        = strtolower($file->getClientOriginalExtension());
+        $filename   = $hash . '.' . $ext;
+        $storedPath = $file->storeAs($dir, $filename, $disk);
+        $size       = $file->getSize();
 
         $media = TalosMedia::create([
             'name'        => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
@@ -116,12 +102,17 @@ class MediaController extends Controller
             'size'        => $size,
             'url'         => $storedPath,
             'path'        => $storedPath,
-            'width'       => $width,
-            'height'      => $height,
+            'width'       => null,
+            'height'      => null,
             'hash'        => $hash,
             'folder'      => $folder ?: null,
             'uploaded_by' => session('talos_user_id'),
+            'status'      => $willConvert ? 'converting' : 'ready',
         ]);
+
+        if ($willConvert) {
+            ConvertImageToWebp::dispatch($media->id, $disk);
+        }
 
         return response()->json(['data' => $media]);
     }

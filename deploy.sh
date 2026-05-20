@@ -31,7 +31,7 @@ BOLD='\033[1m';      DIM='\033[2m';       RESET='\033[0m'
 
 # ── State / tracking ──────────────────────────────────────────────────────────
 STEP=0
-TOTAL_STEPS=8
+TOTAL_STEPS=9
 WARNINGS=()
 SPINNER_PID=''
 
@@ -1013,7 +1013,44 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PHASE 8 — Final verification
+# PHASE 8 — Queue worker (background image conversion)
+# ══════════════════════════════════════════════════════════════════════════════
+step "Setting up queue worker"
+
+QUEUE_SERVICE="talos-queue-${DOMAIN//\./-}"
+QUEUE_SERVICE_FILE="/etc/systemd/system/${QUEUE_SERVICE}.service"
+
+cat > "$QUEUE_SERVICE_FILE" <<QUEUEUNIT
+[Unit]
+Description=Talos CMS Queue Worker — ${APP_NAME}
+After=network.target
+
+[Service]
+User=${WEB_USER}
+Group=${WEB_USER}
+WorkingDirectory=${INSTALL_DIR}
+ExecStart=/usr/bin/php${PHP_VER} artisan queue:work database --sleep=3 --tries=3 --timeout=120 --max-time=3600
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/talos-queue-${DOMAIN}.log
+StandardError=append:/var/log/talos-queue-${DOMAIN}.log
+
+[Install]
+WantedBy=multi-user.target
+QUEUEUNIT
+
+run systemctl daemon-reload
+run systemctl enable "$QUEUE_SERVICE"
+run systemctl restart "$QUEUE_SERVICE"
+
+if systemctl is-active --quiet "$QUEUE_SERVICE"; then
+    ok "Queue worker running (${QUEUE_SERVICE})"
+else
+    warn "Queue worker failed to start — image conversion will not work in background"
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PHASE 9 — Final verification
 # ══════════════════════════════════════════════════════════════════════════════
 step "Final verification"
 
@@ -1031,6 +1068,13 @@ if systemctl is-active --quiet "$FPM_SERVICE"; then
     ok "PHP-FPM (${FPM_SERVICE}) is running"
 else
     warn "PHP-FPM is NOT running"; ERRORS_FOUND=$((ERRORS_FOUND+1))
+fi
+
+# Check queue worker is running
+if systemctl is-active --quiet "$QUEUE_SERVICE"; then
+    ok "Queue worker (${QUEUE_SERVICE}) is running"
+else
+    warn "Queue worker is NOT running — image conversion will be skipped"; ERRORS_FOUND=$((ERRORS_FOUND+1))
 fi
 
 # Check DB readable
@@ -1092,8 +1136,9 @@ if [[ "$SSL_METHOD" == "selfsigned" ]]; then
 fi
 
 echo -e "  ${DIM}Useful commands:${RESET}"
-echo -e "  ${DIM}  php ${INSTALL_DIR}/artisan talos:install    # add another super admin${RESET}"
-echo -e "  ${DIM}  systemctl status nginx ${FPM_SERVICE}       # service status${RESET}"
+echo -e "  ${DIM}  php ${INSTALL_DIR}/artisan talos:install               # add another super admin${RESET}"
+echo -e "  ${DIM}  systemctl status nginx ${FPM_SERVICE} ${QUEUE_SERVICE} # service status${RESET}"
+echo -e "  ${DIM}  journalctl -u ${QUEUE_SERVICE} -f                      # queue worker logs${RESET}"
 echo -e "  ${DIM}  tail -f /var/log/nginx/talos-${DOMAIN}-error.log${RESET}"
 echo -e "  ${DIM}  tail -f ${INSTALL_DIR}/storage/logs/laravel.log${RESET}"
 echo

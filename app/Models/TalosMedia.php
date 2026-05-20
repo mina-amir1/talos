@@ -12,7 +12,7 @@ class TalosMedia extends Model
     protected $fillable = [
         'name', 'alternative_text', 'caption', 'mime_type',
         'ext', 'size', 'url', 'path', 'width', 'height',
-        'formats', 'hash', 'uploaded_by', 'folder',
+        'formats', 'hash', 'uploaded_by', 'folder', 'status',
     ];
 
     protected $casts    = ['formats' => 'array'];

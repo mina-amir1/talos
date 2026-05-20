@@ -116,7 +116,7 @@
                     </span>
                     <span x-show="uploading" x-cloak>Uploading… <span x-text="progress + '%'"></span></span>
                 </p>
-                <p class="text-xs text-slate-400 pointer-events-none">Images are automatically converted to WebP · uploading to <span class="font-mono text-slate-400">{{ $folder ?: 'root' }}</span></p>
+                <p class="text-xs text-slate-400 pointer-events-none">Images are automatically converted to WebP (SVGs kept as-is) · uploading to <span class="font-mono text-slate-400">{{ $folder ?: 'root' }}</span></p>
                 <div x-show="uploading" x-cloak class="mt-2 h-1.5 bg-slate-200 rounded-full overflow-hidden max-w-xs mx-auto">
                     <div class="h-full bg-blue-500 rounded-full transition-all" :style="`width:${progress}%`"></div>
                 </div>
@@ -245,8 +245,18 @@
                                    class="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 cursor-pointer">
                         </div>
 
+                        @if($file->status === 'converting')
+                            <div class="absolute top-2 right-2 z-10 flex items-center gap-1 bg-amber-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                                <svg class="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                </svg>
+                                Converting
+                            </div>
+                        @endif
+
                         @if($file->isImage())
-                            <div class="aspect-square overflow-hidden">
+                            <div class="aspect-square overflow-hidden {{ $file->status === 'converting' ? 'opacity-60' : '' }}">
                                 <img src="{{ $file->url }}" alt="{{ $file->name }}"
                                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
                             </div>
