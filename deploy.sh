@@ -45,6 +45,7 @@ PHP_VER=''
 WEB_USER=''
 SSL_METHOD=''       # "letsencrypt" | "selfsigned" | "none"
 ADMIN_PANEL_PREFIX='talos'
+BEHIND_CLOUDFLARE=false
 
 # ── Spinner ───────────────────────────────────────────────────────────────────
 _spinner() {
@@ -216,30 +217,72 @@ get_server_ip() {
         || echo "unknown"
 }
 
+resolve_domain_ip() {
+    local domain="$1"
+    local ip=''
+    if command -v dig &>/dev/null; then
+        ip=$(dig +short "$domain" A 2>/dev/null | grep -E '^[0-9]+\.' | head -1 || true)
+    fi
+    if [[ -z "$ip" ]] && command -v host &>/dev/null; then
+        ip=$(host -t A "$domain" 2>/dev/null | awk '/has address/{print $NF}' | head -1 || true)
+    fi
+    if [[ -z "$ip" ]] && command -v nslookup &>/dev/null; then
+        ip=$(nslookup "$domain" 2>/dev/null | awk '/^Address: /{print $2}' | grep -v '#' | head -1 || true)
+    fi
+    if [[ -z "$ip" ]]; then
+        ip=$(getent hosts "$domain" 2>/dev/null | awk '{print $1}' | grep -E '^[0-9]+\.' | head -1 || true)
+    fi
+    echo "$ip"
+}
+
 domain_resolves_here() {
     local domain="$1"
     local server_ip; server_ip=$(get_server_ip)
-    local domain_ip=''
+    local domain_ip; domain_ip=$(resolve_domain_ip "$domain")
 
-    # Try multiple resolution methods in order
-    if command -v dig &>/dev/null; then
-        domain_ip=$(dig +short "$domain" A 2>/dev/null | grep -E '^[0-9]+\.' | head -1 || true)
-    fi
-    if [[ -z "$domain_ip" ]] && command -v host &>/dev/null; then
-        domain_ip=$(host -t A "$domain" 2>/dev/null | awk '/has address/{print $NF}' | head -1 || true)
-    fi
-    if [[ -z "$domain_ip" ]] && command -v nslookup &>/dev/null; then
-        domain_ip=$(nslookup "$domain" 2>/dev/null | awk '/^Address: /{print $2}' | grep -v '#' | head -1 || true)
-    fi
+    # Last resort: curl check
     if [[ -z "$domain_ip" ]]; then
-        domain_ip=$(getent hosts "$domain" 2>/dev/null | awk '{print $1}' | grep -E '^[0-9]+\.' | head -1 || true)
-    fi
-    # Last resort: try an HTTP request and check if it reaches this server
-    if [[ -z "$domain_ip" ]]; then
-        domain_ip=$(curl -s --max-time 5 --resolve "${domain}:80:${server_ip}" "http://${domain}/" -o /dev/null -w "%{remote_ip}" 2>/dev/null || true)
+        domain_ip=$(curl -s --max-time 5 --resolve "${domain}:80:${server_ip}" \
+            "http://${domain}/" -o /dev/null -w "%{remote_ip}" 2>/dev/null || true)
     fi
 
     [[ -n "$domain_ip" && "$domain_ip" == "$server_ip" ]]
+}
+
+is_cloudflare_proxied() {
+    local domain="$1"
+    local ip; ip=$(resolve_domain_ip "$domain")
+    [[ -z "$ip" ]] && return 1
+
+    # Method 1: reverse PTR record contains "cloudflare"
+    local ptr=''
+    if command -v dig &>/dev/null; then
+        ptr=$(dig +short -x "$ip" 2>/dev/null | head -1 || true)
+    elif command -v host &>/dev/null; then
+        ptr=$(host "$ip" 2>/dev/null | awk '{print $NF}' | head -1 || true)
+    fi
+    [[ "$ptr" == *"cloudflare"* ]] && return 0
+
+    # Method 2: Cloudflare published IPv4 prefix list
+    local cf_prefixes=(
+        "103.21." "103.22." "103.31."
+        "104.16." "104.17." "104.18." "104.19." "104.20." "104.21." "104.22." "104.23."
+        "104.24." "104.25." "104.26." "104.27."
+        "108.162."
+        "141.101."
+        "162.158." "162.159."
+        "172.64." "172.65." "172.66." "172.67." "172.68." "172.69." "172.70." "172.71."
+        "173.245."
+        "188.114."
+        "190.93."
+        "197.234."
+        "198.41."
+    )
+    for prefix in "${cf_prefixes[@]}"; do
+        [[ "$ip" == ${prefix}* ]] && return 0
+    done
+
+    return 1
 }
 
 port_available() {
@@ -387,31 +430,47 @@ if [[ -d "$INSTALL_DIR" ]]; then
     fi
 fi
 
-# ── SSL ───────────────────────────────────────────────────────────────────────
+# ── DNS + Cloudflare detection ────────────────────────────────────────────────
 echo
 SERVER_IP=$(get_server_ip)
-echo -e "  ${DIM}Checking if ${DOMAIN} resolves to this server (${SERVER_IP})...${RESET}"
+echo -e "  ${DIM}Checking DNS for ${DOMAIN}...${RESET}"
 
 DOMAIN_RESOLVES=false
-if domain_resolves_here "$DOMAIN"; then
+if is_cloudflare_proxied "$DOMAIN"; then
+    BEHIND_CLOUDFLARE=true
     DOMAIN_RESOLVES=true
-    ok "Domain ${DOMAIN} points to this server."
+    ok "Domain ${DOMAIN} is proxied through ${BOLD}Cloudflare${RESET}."
+    info "Cloudflare sits in front of your server — self-signed cert on the origin is the correct choice."
+    info "After deployment set Cloudflare SSL/TLS mode to ${BOLD}'Full'${RESET} (not 'Full Strict')."
+elif domain_resolves_here "$DOMAIN"; then
+    DOMAIN_RESOLVES=true
+    ok "Domain ${DOMAIN} points to this server (${SERVER_IP})."
 else
     warn "Domain ${DOMAIN} does not appear to point to this server (${SERVER_IP})."
-    warn "Let's Encrypt will fail — DNS must propagate first."
+    warn "Let's Encrypt will fail — make sure DNS is propagated first."
 fi
 
+# ── SSL method ────────────────────────────────────────────────────────────────
 echo
 echo -e "  ${BOLD}SSL certificate method:${RESET}"
-echo -e "    ${DIM}1.${RESET} Let's Encrypt (free, auto-renewing) ${GREEN}← recommended if DNS is ready${RESET}"
-echo -e "    ${DIM}2.${RESET} Self-signed (instant, browser warning)"
-echo -e "    ${DIM}3.${RESET} Skip SSL (HTTP only)"
+if $BEHIND_CLOUDFLARE; then
+    echo -e "    ${DIM}1.${RESET} Let's Encrypt ${YELLOW}✗ won't work — Cloudflare proxy blocks HTTP-01 challenge${RESET}"
+    echo -e "    ${DIM}2.${RESET} Self-signed ${GREEN}← recommended with Cloudflare${RESET}"
+    echo -e "    ${DIM}3.${RESET} Skip SSL (HTTP only)"
+else
+    echo -e "    ${DIM}1.${RESET} Let's Encrypt (free, auto-renewing) ${GREEN}← recommended if DNS is ready${RESET}"
+    echo -e "    ${DIM}2.${RESET} Self-signed (instant, browser warning)"
+    echo -e "    ${DIM}3.${RESET} Skip SSL (HTTP only)"
+fi
 printf "  Choice [1-3]: "
 read -r _ssl_choice </dev/tty
-case "${_ssl_choice:-1}" in
+case "${_ssl_choice:-2}" in
     1)
-        if ! $DOMAIN_RESOLVES; then
-            warn "DNS not ready — falling back to self-signed. You can run certbot manually later."
+        if $BEHIND_CLOUDFLARE; then
+            warn "Let's Encrypt HTTP-01 challenge fails behind Cloudflare proxy — switching to self-signed."
+            SSL_METHOD="selfsigned"
+        elif ! $DOMAIN_RESOLVES; then
+            warn "DNS not ready — falling back to self-signed. Run certbot manually once DNS propagates."
             SSL_METHOD="selfsigned"
         else
             SSL_METHOD="letsencrypt"
@@ -436,6 +495,7 @@ echo -e "  ${DIM}Domain:${RESET}        ${DOMAIN}"
 echo -e "  ${DIM}Install dir:${RESET}   ${INSTALL_DIR}"
 echo -e "  ${DIM}PHP version:${RESET}   ${PHP_VER} ${DIM}(auto)${RESET}"
 echo -e "  ${DIM}SSL:${RESET}           ${SSL_METHOD}"
+echo -e "  ${DIM}Cloudflare:${RESET}    $($BEHIND_CLOUDFLARE && echo 'Yes — proxy detected' || echo 'No')"
 echo -e "  ${DIM}Source:${RESET}        ${SOURCE_TYPE}${GIT_URL:+ (${GIT_URL})}"
 echo -e "  ${DIM}Web user:${RESET}      ${WEB_USER}"
 echo
@@ -988,7 +1048,11 @@ NGINXSSL
     run nginx -t
     run systemctl reload nginx
     ok "Nginx reloaded with self-signed SSL"
-    warn "Self-signed cert: browsers will show a security warning. Use Let's Encrypt when DNS is ready."
+    if $BEHIND_CLOUDFLARE; then
+        info "Cloudflare proxy detected — set SSL/TLS mode to 'Full' in your Cloudflare dashboard."
+    else
+        warn "Self-signed cert: browsers will show a security warning. Use Let's Encrypt when DNS is ready."
+    fi
 fi
 
 # ── No SSL ────────────────────────────────────────────────────────────────────
@@ -1130,8 +1194,15 @@ if (( ${#WARNINGS[@]} > 0 )); then
 fi
 
 if [[ "$SSL_METHOD" == "selfsigned" ]]; then
-    echo -e "  ${DIM}To upgrade to Let's Encrypt once DNS is pointed here:${RESET}"
-    echo -e "  ${CYAN}  certbot --nginx -d ${DOMAIN} --email your@email.com --agree-tos --non-interactive --redirect${RESET}"
+    if $BEHIND_CLOUDFLARE; then
+        echo -e "  ${BOLD}${CYAN}Cloudflare SSL setup (required):${RESET}"
+        echo -e "  ${CYAN}  1. Cloudflare dashboard → your domain → SSL/TLS${RESET}"
+        echo -e "  ${CYAN}  2. Set encryption mode to ${BOLD}'Full'${RESET}${CYAN} (not 'Flexible', not 'Full Strict')${RESET}"
+        echo -e "  ${DIM}  Visitors will get a valid HTTPS padlock via Cloudflare's edge certificate.${RESET}"
+    else
+        echo -e "  ${DIM}To upgrade to Let's Encrypt once DNS is pointed here:${RESET}"
+        echo -e "  ${CYAN}  certbot --nginx -d ${DOMAIN} --email your@email.com --agree-tos --non-interactive --redirect${RESET}"
+    fi
     echo
 fi
 
