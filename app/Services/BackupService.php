@@ -40,12 +40,15 @@ class BackupService
 
         $zip->close();
 
-        // Upload to backup R2
-        $disk    = $this->storage->backupDisk();
-        $r2Key   = 'backups/' . $zipName;
-        $disk->put($r2Key, file_get_contents($tmpPath));
-
-        unlink($tmpPath);
+        try {
+            $disk  = $this->storage->backupDisk();
+            $r2Key = 'backups/' . $zipName;
+            $disk->put($r2Key, file_get_contents($tmpPath));
+        } finally {
+            if (file_exists($tmpPath)) {
+                unlink($tmpPath);
+            }
+        }
 
         TalosSettings::set('r2_backup_last_run', Carbon::now()->toIso8601String());
 
