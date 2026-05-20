@@ -556,9 +556,9 @@ if ! command -v composer &>/dev/null; then
     fi
     run php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer --quiet
     rm -f /tmp/composer-setup.php
-    stop_spinner; ok "Composer $(composer --version --no-ansi | awk '{print $3}') installed"
+    stop_spinner; ok "Composer $(composer --version --no-ansi 2>/dev/null | awk '{print $3}') installed"
 else
-    ok "Composer $(composer --version --no-ansi | awk '{print $3}') already installed"
+    ok "Composer $(composer --version --no-ansi 2>/dev/null | awk '{print $3}') already installed"
 fi
 
 # ── Certbot (only if Let's Encrypt chosen) ────────────────────────────────────
