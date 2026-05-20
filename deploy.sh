@@ -276,9 +276,38 @@ php_ext_ok() {
 
 fpm_sock() {
     local ver="$1"
+
+    # 1. Read the listen directive straight from the pool config (most reliable)
+    local pool_conf
+    for pool_conf in \
+        "/etc/php/${ver}/fpm/pool.d/www.conf" \
+        "/etc/php-fpm.d/www.conf"; do
+        if [[ -f "$pool_conf" ]]; then
+            local listen
+            listen=$(grep -E "^listen\s*=" "$pool_conf" 2>/dev/null | awk -F'=' '{print $2}' | tr -d ' ' | head -1)
+            [[ -n "$listen" ]] && echo "$listen" && return
+        fi
+    done
+
+    # 2. Find any existing socket on disk
+    local sock
+    for sock in \
+        "/run/php/php${ver}-fpm.sock" \
+        "/var/run/php/php${ver}-fpm.sock" \
+        "/run/php-fpm/www.sock" \
+        "/var/run/php-fpm/www.sock"; do
+        [[ -S "$sock" ]] && echo "$sock" && return
+    done
+
+    # 3. Detect the TCP port PHP-FPM is actually listening on
+    local port
+    port=$(ss -tlnp 2>/dev/null | grep -i "php" | awk '{print $4}' | grep -oE '[0-9]+$' | head -1)
+    [[ -n "$port" ]] && echo "127.0.0.1:${port}" && return
+
+    # 4. Absolute fallback
     case "$OS" in
-        debian) echo "/var/run/php/php${ver}-fpm.sock" ;;
-        rhel)   echo "/var/run/php-fpm/www.sock" ;;
+        debian) echo "/run/php/php${ver}-fpm.sock" ;;
+        rhel)   echo "/run/php-fpm/www.sock" ;;
     esac
 }
 
@@ -708,17 +737,23 @@ FPM_SOCK=$(fpm_sock "$PHP_VER")
 run systemctl enable "$FPM_SERVICE"
 run systemctl restart "$FPM_SERVICE"
 
-# Wait for socket to appear
-SOCK_WAIT=0
-while [[ ! -S "$FPM_SOCK" && $SOCK_WAIT -lt 10 ]]; do
-    sleep 1; SOCK_WAIT=$((SOCK_WAIT+1))
-done
-
-if [[ -S "$FPM_SOCK" ]]; then
-    ok "PHP-FPM running (socket: ${FPM_SOCK})"
+# Wait for FPM to become ready
+if [[ "$FPM_SOCK" == /* ]]; then
+    # Unix socket — wait for it to appear on disk
+    SOCK_WAIT=0
+    while [[ ! -S "$FPM_SOCK" && $SOCK_WAIT -lt 10 ]]; do
+        sleep 1; SOCK_WAIT=$((SOCK_WAIT+1))
+    done
+    if [[ -S "$FPM_SOCK" ]]; then
+        ok "PHP-FPM running (socket: ${FPM_SOCK})"
+    else
+        warn "PHP-FPM socket not found at ${FPM_SOCK} — falling back to TCP 127.0.0.1:9000"
+        FPM_SOCK="127.0.0.1:9000"
+    fi
 else
-    warn "PHP-FPM socket not found at ${FPM_SOCK} — using TCP 127.0.0.1:9000 fallback"
-    FPM_SOCK="127.0.0.1:9000"
+    # TCP address — just give FPM a moment to start
+    sleep 2
+    ok "PHP-FPM running (TCP: ${FPM_SOCK})"
 fi
 
 # ── PHP-FPM pool: bump upload and execution limits ────────────────────────────
