@@ -106,6 +106,15 @@ class ContentManagerController extends Controller
             $data['localizations_id'] = $request->input('localizations_id') ?: null;
         }
 
+        // Slug: collection types only; translations inherit from parent (localizations_id set)
+        $isCollection = ($contentType['kind'] ?? 'collectionType') === 'collectionType';
+        if ($isCollection) {
+            $isTranslation = $i18n && $request->filled('localizations_id');
+            if (! $isTranslation && $request->filled('slug')) {
+                $data['slug'] = Str::slug($request->input('slug'));
+            }
+        }
+
         $data['created_by'] = session('talos_user_id');
         $data['updated_by'] = session('talos_user_id');
 
@@ -194,7 +203,24 @@ class ContentManagerController extends Controller
         $data['updated_by'] = session('talos_user_id');
 
         $model = $this->modelService->make($uid);
-        $model->newQuery()->findOrFail($id)->update($data);
+        $entry = $model->newQuery()->findOrFail($id);
+
+        // Slug: only update on root entries; sync to all translations
+        if (($contentType['kind'] ?? 'collectionType') === 'collectionType' && $request->filled('slug')) {
+            $isRoot = ! $i18n || ! $entry->localizations_id || $entry->id === $entry->localizations_id;
+            if ($isRoot) {
+                $newSlug = Str::slug($request->input('slug'));
+                $data['slug'] = $newSlug;
+                if ($i18n && $newSlug && $entry->localizations_id) {
+                    $model->newQuery()
+                        ->where('localizations_id', $entry->localizations_id)
+                        ->where('id', '!=', $entry->id)
+                        ->update(['slug' => $newSlug]);
+                }
+            }
+        }
+
+        $entry->update($data);
 
         if (($contentType['kind'] ?? 'collectionType') === 'singleType') {
             return redirect()

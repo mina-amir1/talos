@@ -21,6 +21,10 @@ class SchemaGeneratorService
 
         Schema::create($table, function (Blueprint $bp) use ($schema) {
             $bp->id();
+            // Slug: collection types only — single types don't have list URLs
+            if (($schema['kind'] ?? 'collectionType') === 'collectionType') {
+                $bp->string('slug', 255)->nullable()->index();
+            }
             $this->addAttributes($bp, $schema['attributes'] ?? []);
             $bp->unsignedBigInteger('created_by')->nullable();
             $bp->unsignedBigInteger('updated_by')->nullable();
@@ -64,6 +68,11 @@ class SchemaGeneratorService
         $renamedTargets = array_values($renames);
 
         Schema::table($table, function (Blueprint $bp) use ($table, $attributes, $schema, $renamedTargets) {
+            // Add slug for collection types that don't have it yet
+            if (($schema['kind'] ?? 'collectionType') === 'collectionType' && ! Schema::hasColumn($table, 'slug')) {
+                $bp->string('slug', 255)->nullable()->index();
+            }
+
             foreach ($attributes as $name => $field) {
                 if (! Schema::hasColumn($table, $name) && ! in_array($name, $renamedTargets)) {
                     $this->addColumn($bp, $name, array_merge($field, ['required' => false]));

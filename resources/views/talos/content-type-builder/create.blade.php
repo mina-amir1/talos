@@ -99,7 +99,7 @@
                 <label class="relative inline-flex items-center cursor-pointer">
                     <input type="hidden" name="options[draftAndPublish]" value="0">
                     <input type="checkbox" name="options[draftAndPublish]" value="1"
-                           {{ old('options.draftAndPublish') ? 'checked' : '' }}
+                           {{ old('options.draftAndPublish', '1') ? 'checked' : '' }}
                            class="sr-only peer">
                     <div class="w-11 h-6 bg-slate-200 peer-checked:bg-blue-600 rounded-full peer
                                 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px]
@@ -115,7 +115,7 @@
                 <label class="relative inline-flex items-center cursor-pointer">
                     <input type="hidden" name="options[i18n]" value="0">
                     <input type="checkbox" name="options[i18n]" value="1"
-                           {{ old('options.i18n') ? 'checked' : '' }}
+                           {{ old('options.i18n', '1') ? 'checked' : '' }}
                            class="sr-only peer">
                     <div class="w-11 h-6 bg-slate-200 peer-checked:bg-blue-600 rounded-full peer
                                 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px]

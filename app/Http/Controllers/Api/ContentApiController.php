@@ -102,7 +102,7 @@ class ContentApiController extends Controller
         ]);
     }
 
-    public function show(Request $request, string $name, int $id): JsonResponse
+    public function show(Request $request, string $name, string $id): JsonResponse
     {
         $contentType = $this->resolveType($name);
 
@@ -112,9 +112,9 @@ class ContentApiController extends Controller
 
         $uid    = $contentType['__uid'];
         $model  = $this->modelService->make($uid);
-        $entry  = $model->newQuery()->findOrFail($id);
         $locale = $this->requestLocale($request);
         $i18n   = (bool) ($contentType['options']['i18n'] ?? false);
+        $entry  = $this->resolveEntry($model, $id, $i18n, $locale);
 
         // If i18n and the found entry isn't in the requested locale, swap to it
         if ($i18n && $entry->locale !== $locale && $entry->localizations_id) {
@@ -173,7 +173,7 @@ class ContentApiController extends Controller
         return response()->json(['data' => $entry], 201);
     }
 
-    public function update(Request $request, string $name, int $id): JsonResponse
+    public function update(Request $request, string $name, string $id): JsonResponse
     {
         $contentType = $this->resolveType($name);
 
@@ -183,13 +183,14 @@ class ContentApiController extends Controller
 
         $uid   = $contentType['__uid'];
         $model = $this->modelService->make($uid);
-        $entry = $model->newQuery()->findOrFail($id);
+        $i18n  = (bool) ($contentType['options']['i18n'] ?? false);
+        $entry = $this->resolveEntry($model, $id, $i18n, $this->requestLocale($request));
         $entry->update($request->all());
 
         return response()->json(['data' => $entry]);
     }
 
-    public function destroy(string $name, int $id): JsonResponse
+    public function destroy(Request $request, string $name, string $id): JsonResponse
     {
         $contentType = $this->resolveType($name);
 
@@ -197,8 +198,10 @@ class ContentApiController extends Controller
             return $this->notFound($name);
         }
 
-        $uid = $contentType['__uid'];
-        $this->modelService->make($uid)->newQuery()->findOrFail($id)->delete();
+        $uid   = $contentType['__uid'];
+        $model = $this->modelService->make($uid);
+        $i18n  = (bool) ($contentType['options']['i18n'] ?? false);
+        $this->resolveEntry($model, $id, $i18n, $this->requestLocale($request))->delete();
 
         return response()->json(['data' => null], 200);
     }
@@ -345,7 +348,10 @@ class ContentApiController extends Controller
 
     private function filterToSchema(array $entries, array $attributes): array
     {
-        static $systemKeys = ['id', 'created_by', 'updated_by', 'published_at', 'created_at', 'updated_at'];
+        static $systemKeys = [
+            'id', 'slug', 'locale', 'localizations_id',
+            'created_by', 'updated_by', 'published_at', 'created_at', 'updated_at',
+        ];
 
         $allowed = array_flip(array_merge($systemKeys, array_keys($attributes)));
 
@@ -452,6 +458,25 @@ class ContentApiController extends Controller
         }
 
         return $entry;
+    }
+
+    private function resolveEntry(\Illuminate\Database\Eloquent\Model $model, string $id, bool $i18n, string $locale): \Illuminate\Database\Eloquent\Model
+    {
+        if (is_numeric($id)) {
+            return $model->newQuery()->findOrFail((int) $id);
+        }
+
+        // Slug lookup — prefer the requested locale, fall back to default
+        $query = $model->newQuery()->where('slug', $id);
+
+        if ($i18n) {
+            $entry = (clone $query)->where('locale', $locale)->first()
+                ?? (clone $query)->where('locale', config('talos.default_locale'))->first();
+        } else {
+            $entry = $query->first();
+        }
+
+        return $entry ?? abort(404);
     }
 
     private function resolveType(string $name): ?array
