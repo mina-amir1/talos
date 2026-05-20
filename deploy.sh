@@ -6,6 +6,7 @@
 # ══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 IFS=$'\n\t'
+export COMPOSER_ALLOW_SUPERUSER=1
 
 # ── Repository ────────────────────────────────────────────────────────────────
 TALOS_REPO="https://github.com/mina-amir1/talos.git"
@@ -658,7 +659,7 @@ fi
 # ── Composer install ──────────────────────────────────────────────────────────
 if ! state_has "composer_installed"; then
     run_ok "Installing PHP dependencies (composer install)" \
-        env COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --no-dev --optimize-autoloader --working-dir="$INSTALL_DIR"
+        composer install --no-interaction --no-dev --optimize-autoloader --working-dir="$INSTALL_DIR"
     state_set "composer_installed"
 else
     ok "Composer dependencies already installed"
