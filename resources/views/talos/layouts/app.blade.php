@@ -287,6 +287,13 @@
                     <p class="text-xs font-medium truncate text-slate-700">{{ session('talos_user_name', 'Admin') }}</p>
                     <p class="text-xs truncate text-slate-400">{{ session('talos_user_email') }}</p>
                 </div>
+                <a href="{{ route('talos.settings.profile') }}" title="My profile"
+                   class="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-2.828 1.172H7v-2a4 4 0 011.172-2.828z"/>
+                    </svg>
+                </a>
                 <form action="{{ route('talos.logout') }}" method="POST">
                     @csrf
                     <button type="submit" title="Sign out"

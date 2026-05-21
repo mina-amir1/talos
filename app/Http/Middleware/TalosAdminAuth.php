@@ -50,8 +50,8 @@ class TalosAdminAuth
         $routeName   = $request->route()->getName();
         $permissions = $user->role?->permissions ?? [];
 
-        // Dashboard is always accessible
-        if ($routeName === 'talos.dashboard') {
+        // Always accessible to any authenticated user
+        if (in_array($routeName, ['talos.dashboard', 'talos.settings.profile', 'talos.settings.profile.password'])) {
             return true;
         }
 

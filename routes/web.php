@@ -82,9 +82,13 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::put('roles/{id}',         [SettingsController::class, 'updateRole'])->name('roles.update');
             Route::delete('roles/{id}',      [SettingsController::class, 'destroyRole'])->name('roles.destroy');
 
-            Route::get('users',              [SettingsController::class, 'users'])->name('users');
-            Route::post('users',             [SettingsController::class, 'storeUser'])->name('users.store');
-            Route::delete('users/{id}',      [SettingsController::class, 'destroyUser'])->name('users.destroy');
+            Route::get('users',                    [SettingsController::class, 'users'])->name('users');
+            Route::post('users',                   [SettingsController::class, 'storeUser'])->name('users.store');
+            Route::delete('users/{id}',            [SettingsController::class, 'destroyUser'])->name('users.destroy');
+            Route::put('users/{id}/password',      [SettingsController::class, 'resetUserPassword'])->name('users.reset-password');
+
+            Route::get('profile',                  [SettingsController::class, 'profile'])->name('profile');
+            Route::put('profile/password',         [SettingsController::class, 'changeOwnPassword'])->name('profile.password');
 
             Route::get('api-tokens',         [SettingsController::class, 'apiTokens'])->name('api-tokens');
             Route::post('api-tokens',        [SettingsController::class, 'storeApiToken'])->name('api-tokens.store');

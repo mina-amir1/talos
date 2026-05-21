@@ -91,12 +91,13 @@ class SettingsController extends Controller
 
     // ── Admin Users ────────────────────────────────────────────────────────
 
-    public function users()
+    public function users(Request $request)
     {
-        $users = TalosUser::with('role')->get();
-        $roles = TalosRole::all();
+        $users   = TalosUser::with('role')->get();
+        $roles   = TalosRole::all();
+        $isSA    = $request->attributes->get('talos_user')?->is_super_admin ?? false;
 
-        return view('talos.settings.users', compact('users', 'roles'));
+        return view('talos.settings.users', compact('users', 'roles', 'isSA'));
     }
 
     public function storeUser(Request $request)
@@ -132,6 +133,51 @@ class SettingsController extends Controller
         $user->delete();
 
         return redirect()->route('talos.settings.users')->with('success', 'User deleted.');
+    }
+
+    public function resetUserPassword(Request $request, int $id)
+    {
+        if (! $request->attributes->get('talos_user')?->is_super_admin) {
+            abort(403);
+        }
+
+        $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = TalosUser::findOrFail($id);
+
+        if ($user->is_super_admin) {
+            return response()->json(['error' => 'Cannot reset a super admin password.'], 403);
+        }
+
+        $user->update(['password' => Hash::make($request->password)]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function profile(Request $request)
+    {
+        $user = $request->attributes->get('talos_user');
+        return view('talos.settings.profile', compact('user'));
+    }
+
+    public function changeOwnPassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password'         => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->attributes->get('talos_user');
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'Current password is incorrect.']);
+        }
+
+        $user->update(['password' => Hash::make($request->password)]);
+
+        return back()->with('success', 'Password updated successfully.');
     }
 
     // ── API Tokens ─────────────────────────────────────────────────────────
