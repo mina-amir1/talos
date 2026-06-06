@@ -331,7 +331,7 @@
         </header>
 
         {{-- Content --}}
-        <main class="flex-1 overflow-y-auto p-6 bg-slate-50">
+        <main class="flex-1 overflow-y-auto p-6 bg-slate-50" id="talos-main">
 
             {{-- Flash: success --}}
             @if(session('success'))
@@ -390,7 +390,7 @@
 <div id="talos-toasts" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none" style="min-width:280px;max-width:360px"></div>
 
 {{-- Confirm modal --}}
-<div id="talos-confirm-backdrop"
+<div id="talos-confirm-backdrop" data-no-dirty
      class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
     <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
         <p id="talos-confirm-message" class="text-sm text-slate-700 leading-relaxed mb-5"></p>
@@ -475,7 +475,57 @@ window.talos = (() => {
         if (ok) { e.target.dataset.confirm = ''; e.target.submit(); }
     });
 
-    return { toast, confirm };
+    // ── Unsaved changes tracking ──────────────────────────────────────────────
+    let _dirty = false;
+
+    function markDirty() { _dirty = true; }
+    function markClean() { _dirty = false; }
+    function isDirty()   { return _dirty; }
+
+    // Any input/change on the page marks it dirty (opt-out with data-no-dirty)
+    document.addEventListener('input',  (e) => { if (!e.target.closest('[data-no-dirty]')) markDirty(); });
+    document.addEventListener('change', (e) => { if (!e.target.closest('[data-no-dirty]')) markDirty(); });
+
+    // Button clicks inside the main content area also mark dirty
+    // (covers Alpine-driven pickers, toggles, field adds — opt-out with data-no-dirty)
+    document.addEventListener('click', (e) => {
+        if (_dirty) return;
+        const btn = e.target.closest('button[type="button"], button:not([type])');
+        if (!btn) return;
+        if (btn.closest('[data-no-dirty]')) return;
+        const main = document.getElementById('talos-main');
+        if (main && main.contains(btn)) markDirty();
+    });
+
+    // Clean up on any form submit (save action)
+    document.addEventListener('submit', () => markClean(), true);
+
+    // Native browser warning (refresh, close tab, back/forward)
+    window.addEventListener('beforeunload', (e) => {
+        if (!_dirty) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    // Intercept internal link clicks when dirty
+    document.addEventListener('click', async (e) => {
+        if (!_dirty) return;
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        const href = link.getAttribute('href');
+        if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+        // Allow target="_blank" — new tab, no navigation loss
+        if (link.target === '_blank') return;
+
+        e.preventDefault();
+        const leave = await confirm('You have unsaved changes that will be lost. Leave this page?', { confirmLabel: 'Leave', danger: true });
+        if (leave) {
+            markClean();
+            window.location.href = link.href;
+        }
+    });
+
+    return { toast, confirm, markDirty, markClean, isDirty };
 })();
 </script>
 </body>
