@@ -218,6 +218,23 @@
                     </div>
                 </template>
 
+                {{-- Media --}}
+                <template x-if="editingField && editingField.type === 'media'">
+                    <div @click="editingField.multiple = !editingField.multiple"
+                         class="flex items-center justify-between p-4 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-100/50 transition-colors">
+                        <div>
+                            <p class="text-sm font-medium text-slate-800">Allow multiple files</p>
+                            <p class="text-xs text-slate-400">Select more than one file at once</p>
+                        </div>
+                        <div class="relative flex-shrink-0">
+                            <div class="w-11 h-6 rounded-full transition-colors" :class="editingField.multiple ? 'bg-blue-600' : 'bg-slate-300'">
+                                <div class="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all"
+                                     :class="editingField.multiple ? 'left-6' : 'left-1'"></div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
                 <div class="space-y-2">
                     <label class="flex items-center justify-between p-3 bg-slate-100 rounded-lg cursor-pointer">
                         <p class="text-sm text-slate-800">Required</p>

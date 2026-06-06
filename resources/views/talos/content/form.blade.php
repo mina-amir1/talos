@@ -520,6 +520,62 @@
                                                                         @endforeach
                                                                     </select>
                                                                 @elseif($subField['type'] === 'media')
+                                                                    @php $subIsMultiple = !empty($subField['multiple']); @endphp
+                                                                    @if($subIsMultiple)
+                                                                    <div x-data="{ _mids: (() => { try { const v = row['{{ $subName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
+                                                                         x-init="$watch('_mids', v => row['{{ $subName }}'] = v)">
+                                                                        <div x-show="_mids.length > 0" class="flex flex-wrap gap-2 mb-2">
+                                                                            @foreach($mediaItems as $m)
+                                                                                <div x-show="_mids.includes({{ $m->id }})" class="relative group">
+                                                                                    @if($m->isImage())
+                                                                                        <img src="{{ $m->url }}" class="h-16 w-16 object-cover rounded-lg">
+                                                                                    @else
+                                                                                        <div class="h-16 w-16 bg-slate-100 flex items-center justify-center text-slate-500 text-xs rounded-lg">{{ $m->ext }}</div>
+                                                                                    @endif
+                                                                                    <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }})"
+                                                                                            class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center">✕</button>
+                                                                                </div>
+                                                                            @endforeach
+                                                                        </div>
+                                                                        <button type="button" @click="_mshow = true"
+                                                                                class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors">
+                                                                            <span x-text="_mids.length ? 'Add / change media' : 'Select from library'"></span>
+                                                                        </button>
+                                                                        <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
+                                                                             @keydown.escape.window="_mshow = false">
+                                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+                                                                                    <h3 class="text-slate-800 font-semibold">Media Library</h3>
+                                                                                    <button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900">
+                                                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                                                    </button>
+                                                                                </div>
+                                                                                <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                    @foreach($mediaItems as $m)
+                                                                                        <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }})"
+                                                                                                class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
+                                                                                                :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                                            @if($m->isImage())
+                                                                                                <img src="{{ $m->url }}" class="w-full h-24 object-cover">
+                                                                                            @else
+                                                                                                <div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
+                                                                                            @endif
+                                                                                            <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                                        </button>
+                                                                                    @endforeach
+                                                                                </div>
+                                                                                <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                    <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                                    <div class="flex items-center gap-3">
+                                                                                        <span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span>
+                                                                                        <button type="button" @click="_mids = []" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                                        <button type="button" @click="_mshow = false" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Done</button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    @else
                                                                     <div x-data="{ _mid: row['{{ $subName }}'] ? parseInt(row['{{ $subName }}']) : null, _mshow: false }"
                                                                          x-init="$watch('_mid', v => row['{{ $subName }}'] = v)">
                                                                         <div x-show="_mid" class="mb-2">
@@ -567,6 +623,7 @@
                                                                             </div>
                                                                         </div>
                                                                     </div>
+                                                                    @endif
                                                                 @else
                                                                     <input type="text" x-model="row['{{ $subName }}']" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
                                                                 @endif
@@ -628,6 +685,62 @@
                                                         @endforeach
                                                     </select>
                                                 @elseif($subField['type'] === 'media')
+                                                    @php $subIsMultiple = !empty($subField['multiple']); @endphp
+                                                    @if($subIsMultiple)
+                                                    <div x-data="{ _mids: (() => { try { const v = d.{{ $subName }}; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
+                                                         x-init="$watch('_mids', v => d.{{ $subName }} = v)">
+                                                        <div x-show="_mids.length > 0" class="flex flex-wrap gap-2 mb-2">
+                                                            @foreach($mediaItems as $m)
+                                                                <div x-show="_mids.includes({{ $m->id }})" class="relative group">
+                                                                    @if($m->isImage())
+                                                                        <img src="{{ $m->url }}" class="h-16 w-16 object-cover rounded-lg">
+                                                                    @else
+                                                                        <div class="h-16 w-16 bg-slate-100 flex items-center justify-center text-slate-500 text-xs rounded-lg">{{ $m->ext }}</div>
+                                                                    @endif
+                                                                    <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }})"
+                                                                            class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center">✕</button>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                        <button type="button" @click="_mshow = true"
+                                                                class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors">
+                                                            <span x-text="_mids.length ? 'Add / change media' : 'Select from library'"></span>
+                                                        </button>
+                                                        <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
+                                                             @keydown.escape.window="_mshow = false">
+                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+                                                                    <h3 class="text-slate-800 font-semibold">Media Library</h3>
+                                                                    <button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900">
+                                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                                    </button>
+                                                                </div>
+                                                                <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                    @foreach($mediaItems as $m)
+                                                                        <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }})"
+                                                                                class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
+                                                                                :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                            @if($m->isImage())
+                                                                                <img src="{{ $m->url }}" class="w-full h-24 object-cover">
+                                                                            @else
+                                                                                <div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
+                                                                            @endif
+                                                                            <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                        </button>
+                                                                    @endforeach
+                                                                </div>
+                                                                <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                    <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                    <div class="flex items-center gap-3">
+                                                                        <span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span>
+                                                                        <button type="button" @click="_mids = []" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                        <button type="button" @click="_mshow = false" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Done</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    @else
                                                     <div x-data="{ _mid: d.{{ $subName }} ? parseInt(d.{{ $subName }}) : null, _mshow: false }"
                                                          x-init="$watch('_mid', v => d.{{ $subName }} = v)">
                                                         <div x-show="_mid" class="mb-2">
@@ -675,6 +788,7 @@
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    @endif
                                                 @else
                                                     <input type="text" x-model="d.{{ $subName }}" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
                                                 @endif
