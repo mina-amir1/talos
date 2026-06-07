@@ -486,17 +486,6 @@ window.talos = (() => {
     document.addEventListener('input',  (e) => { if (!e.target.closest('[data-no-dirty]')) markDirty(); });
     document.addEventListener('change', (e) => { if (!e.target.closest('[data-no-dirty]')) markDirty(); });
 
-    // Button clicks inside the main content area also mark dirty
-    // (covers Alpine-driven pickers, toggles, field adds — opt-out with data-no-dirty)
-    document.addEventListener('click', (e) => {
-        if (_dirty) return;
-        const btn = e.target.closest('button[type="button"], button:not([type])');
-        if (!btn) return;
-        if (btn.closest('[data-no-dirty]')) return;
-        const main = document.getElementById('talos-main');
-        if (main && main.contains(btn)) markDirty();
-    });
-
     // Clean up on any form submit (save action)
     document.addEventListener('submit', () => markClean(), true);
 

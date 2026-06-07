@@ -532,7 +532,7 @@
                                                                                     @else
                                                                                         <div class="h-16 w-16 bg-slate-100 flex items-center justify-center text-slate-500 text-xs rounded-lg">{{ $m->ext }}</div>
                                                                                     @endif
-                                                                                    <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }})"
+                                                                                    <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }}); talos.markDirty()"
                                                                                             class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center">✕</button>
                                                                                 </div>
                                                                             @endforeach
@@ -552,7 +552,7 @@
                                                                                 </div>
                                                                                 <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
                                                                                     @foreach($mediaItems as $m)
-                                                                                        <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }})"
+                                                                                        <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()"
                                                                                                 class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                                 :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                                             @if($m->isImage())
@@ -568,7 +568,7 @@
                                                                                     <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                     <div class="flex items-center gap-3">
                                                                                         <span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span>
-                                                                                        <button type="button" @click="_mids = []" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                                        <button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                                         <button type="button" @click="_mshow = false" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Done</button>
                                                                                     </div>
                                                                                 </div>
@@ -604,7 +604,7 @@
                                                                                 </div>
                                                                                 <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
                                                                                     @foreach($mediaItems as $m)
-                                                                                        <button type="button" @click="_mid = {{ $m->id }}; _mshow = false"
+                                                                                        <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()"
                                                                                                 class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                                 :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                             @if($m->isImage())
@@ -618,7 +618,7 @@
                                                                                 </div>
                                                                                 <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                     <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
-                                                                                    <button @click="_mid = null; _mshow = false" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                                    <button @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -697,7 +697,7 @@
                                                                     @else
                                                                         <div class="h-16 w-16 bg-slate-100 flex items-center justify-center text-slate-500 text-xs rounded-lg">{{ $m->ext }}</div>
                                                                     @endif
-                                                                    <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }})"
+                                                                    <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }}); talos.markDirty()"
                                                                             class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center">✕</button>
                                                                 </div>
                                                             @endforeach
@@ -717,7 +717,7 @@
                                                                 </div>
                                                                 <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
                                                                     @foreach($mediaItems as $m)
-                                                                        <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }})"
+                                                                        <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()"
                                                                                 class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                 :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                             @if($m->isImage())
@@ -733,7 +733,7 @@
                                                                     <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                     <div class="flex items-center gap-3">
                                                                         <span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span>
-                                                                        <button type="button" @click="_mids = []" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                        <button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                         <button type="button" @click="_mshow = false" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Done</button>
                                                                     </div>
                                                                 </div>
@@ -769,7 +769,7 @@
                                                                 </div>
                                                                 <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
                                                                     @foreach($mediaItems as $m)
-                                                                        <button type="button" @click="_mid = {{ $m->id }}; _mshow = false"
+                                                                        <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()"
                                                                                 class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                 :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                             @if($m->isImage())
@@ -783,7 +783,7 @@
                                                                 </div>
                                                                 <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                     <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
-                                                                    <button @click="_mid = null; _mshow = false" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                    <button @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -965,7 +965,7 @@
                                                                             </div>
                                                                             <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
                                                                                 @foreach($mediaItems as $m)
-                                                                                    <button type="button" @click="_mid = {{ $m->id }}; _mshow = false"
+                                                                                    <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()"
                                                                                             class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                             :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                         @if($m->isImage())
@@ -979,7 +979,7 @@
                                                                             </div>
                                                                             <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                 <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
-                                                                                <button @click="_mid = null; _mshow = false" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                                <button @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                             </div>
                                                                         </div>
                                                                     </div>

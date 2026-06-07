@@ -727,7 +727,10 @@ function fieldBuilder(initialAttributes, uid) {
         backToPicker() { this.modal = 'picker'; this.editingField = null; this.editingIndex = null; },
 
         async removeField(index) {
-            if (await talos.confirm('Remove this field? This cannot be undone.')) this.fields.splice(index, 1);
+            if (await talos.confirm('Remove this field? This cannot be undone.')) {
+                this.fields.splice(index, 1);
+                talos.markDirty();
+            }
         },
 
         toggleComponent(uid) {
@@ -760,6 +763,7 @@ function fieldBuilder(initialAttributes, uid) {
                 this.fields.push(f);
             }
             this.closeModal();
+            talos.markDirty();
         },
 
         getSubFieldArray() {
@@ -794,6 +798,7 @@ function fieldBuilder(initialAttributes, uid) {
                 const data = await r.json();
                 if (data.success) {
                     this.renames = {};
+                    talos.markClean();
                     talos.toast('Schema saved!', 'success');
                 } else {
                     talos.toast(data.error || 'Unknown error', 'error');

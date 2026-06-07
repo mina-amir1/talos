@@ -286,7 +286,7 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType') {
         },
 
         editField(i){ this.editingField={...this.fields[i]}; this.editingIndex=i; this.showPicker=false; },
-        async removeField(i){ if(await talos.confirm('Remove this field?'))this.fields.splice(i,1); },
+        async removeField(i){ if(await talos.confirm('Remove this field?')){ this.fields.splice(i,1); talos.markDirty(); } },
         cancelEdit(){ this.editingField=null; this.editingIndex=null; },
 
         addOrUpdateField(){
@@ -296,6 +296,7 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType') {
             if(this.editingIndex!==null)this.fields[this.editingIndex]={...this.editingField};
             else this.fields.push({...this.editingField});
             this.cancelEdit();
+            talos.markDirty();
         },
 
         getSubFieldArray(){
@@ -326,7 +327,7 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType') {
             try{
                 const r=await fetch(route,{method:'PUT',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},body:JSON.stringify({attributes:toObj(this.fields)})});
                 const d=await r.json();
-                if(d.success){talos.toast('Saved successfully!','success');}
+                if(d.success){talos.markClean();talos.toast('Saved successfully!','success');}
                 else talos.toast('Error: '+(d.error||'Unknown'),'error');
             }catch(e){talos.toast('Network error.','error');}
             this.saving=false;
