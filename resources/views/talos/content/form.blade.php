@@ -873,7 +873,7 @@
                                 {{-- ── Single component — inline sub-fields ── --}}
                                 @php
                                     $compRaw  = is_array($value) ? $value : (is_string($value) && $value ? json_decode($value, true) : null);
-                                    $compJson = json_encode($compRaw ?? (object)[]);
+                                    $compJson = !empty($compRaw) ? json_encode($compRaw) : '{}';
                                 @endphp
                                 <p class="text-xs text-slate-400 mb-3 font-mono">{{ $firstUid }}</p>
                                 <div x-data="{ d: {{ $compJson }} }">
