@@ -24,10 +24,11 @@
         ['type' => 'json',        'label' => 'JSON',        'icon' => '{}'],
         ['type' => 'enumeration', 'label' => 'Enumeration', 'icon' => '≡'],
         ['type' => 'repeater',    'label' => 'Repeater',    'icon' => '≣'],
+        ['type' => 'component',   'label' => 'Component',   'icon' => '⬡'],
     ];
 @endphp
 
-<div x-data="fieldBuilder({{ json_encode($component['attributes'] ?? []) }}, '{{ $uid }}', 'component')"
+<div x-data="fieldBuilder({{ json_encode($component['attributes'] ?? []) }}, '{{ $uid }}', 'component', {{ json_encode($otherComponents) }})"
      class="flex gap-6 h-[calc(100vh-120px)]">
 
     {{-- Fields list --}}
@@ -235,6 +236,45 @@
                     </div>
                 </template>
 
+                {{-- Component picker --}}
+                <template x-if="editingField && editingField.type === 'component'">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-500 mb-2">Select component</label>
+                            <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                <template x-for="comp in availableComponents" :key="comp.__uid">
+                                    <label class="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                                           :class="editingField.components && editingField.components[0] === comp.__uid ? 'bg-blue-50 border border-blue-200' : 'bg-slate-50 border border-transparent'">
+                                        <input type="radio"
+                                               :value="comp.__uid"
+                                               :checked="editingField.components && editingField.components[0] === comp.__uid"
+                                               @change="editingField.components = [comp.__uid]"
+                                               class="text-blue-600 focus:ring-0">
+                                        <span class="text-sm text-slate-700" x-text="comp.info.displayName"></span>
+                                        <span class="ml-auto text-xs font-mono text-slate-400" x-text="comp.__uid"></span>
+                                    </label>
+                                </template>
+                                <template x-if="availableComponents.length === 0">
+                                    <p class="text-xs text-slate-400 italic px-2">No other components available.</p>
+                                </template>
+                            </div>
+                        </div>
+                        <div @click="editingField.repeatable = !editingField.repeatable"
+                             class="flex items-center justify-between p-4 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-100/50 transition-colors">
+                            <div>
+                                <p class="text-sm font-medium text-slate-800">Repeatable</p>
+                                <p class="text-xs text-slate-400">Allow multiple instances</p>
+                            </div>
+                            <div class="relative flex-shrink-0">
+                                <div class="w-11 h-6 rounded-full transition-colors" :class="editingField.repeatable ? 'bg-blue-600' : 'bg-slate-300'">
+                                    <div class="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all"
+                                         :class="editingField.repeatable ? 'left-6' : 'left-1'"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
                 <div class="space-y-2">
                     <label class="flex items-center justify-between p-3 bg-slate-100 rounded-lg cursor-pointer">
                         <p class="text-sm text-slate-800">Required</p>
@@ -262,7 +302,7 @@
 </div>
 
 <script>
-function fieldBuilder(initialAttributes, uid, mode = 'contentType') {
+function fieldBuilder(initialAttributes, uid, mode = 'contentType', otherComponents = []) {
     const icons = { string:'T', text:'¶', richtext:'RT', integer:'1', decimal:'1.2', float:'~1',
                     boolean:'⊙', email:'@', url:'🔗', uid:'#', json:'{}', enumeration:'≡',
                     media:'🖼', relation:'⟷', component:'⬡', dynamiczone:'⬡+', date:'📅', datetime:'🕐',
@@ -275,12 +315,14 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType') {
         fields: toArray(initialAttributes),
         showPicker: false, editingField: null, editingIndex: null, saving: false,
         newSubFieldName: '', newSubFieldType: 'string', newSubFieldConfig: {},
+        availableComponents: otherComponents,
 
         getTypeIcon(t){ return icons[t]??'?'; },
 
         selectType(t){
             this.editingField = { type:t, name:'', required:false, unique:false };
             if (t === 'repeater') this.editingField.subFields = {};
+            if (t === 'component') this.editingField.components = [];
             this.editingIndex = null;
             this.showPicker   = false;
         },

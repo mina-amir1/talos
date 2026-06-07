@@ -624,6 +624,233 @@
                                                                         </div>
                                                                     </div>
                                                                     @endif
+                                                                @elseif($subField['type'] === 'component')
+                                                                    @php
+                                                                        $nestedUid    = $subField['components'][0] ?? null;
+                                                                        $nestedSchema = $nestedUid ? ($componentMap[$nestedUid] ?? null) : null;
+                                                                        $nestedRep    = !empty($subField['repeatable']);
+                                                                    @endphp
+                                                                    @if($nestedSchema)
+                                                                        @if($nestedRep)
+                                                                            {{-- Nested repeatable component inside repeatable parent --}}
+                                                                            <div x-data="{
+                                                                                    nestedRows: (() => { try { const v = row['{{ $subName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(),
+                                                                                    nestedOpen: {}
+                                                                                }"
+                                                                                 x-init="$watch('nestedRows', v => row['{{ $subName }}'] = v)">
+                                                                                <div class="space-y-2">
+                                                                                    <template x-for="(nr, ni) in nestedRows" :key="ni">
+                                                                                        <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                                                                                            <div class="flex items-center justify-between px-3 py-2 bg-slate-50 cursor-pointer"
+                                                                                                 @click="nestedOpen[ni] = !nestedOpen[ni]">
+                                                                                                <span class="text-xs font-medium text-slate-600" x-text="'Entry #' + (ni + 1)"></span>
+                                                                                                <div class="flex items-center gap-2">
+                                                                                                    <button type="button" @click.stop="nestedRows.splice(ni, 1); talos.markDirty()" class="text-slate-300 hover:text-red-500 text-xs">✕</button>
+                                                                                                    <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="nestedOpen[ni] ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div x-show="nestedOpen[ni]" class="p-3 space-y-3">
+                                                                                                @foreach($nestedSchema['attributes'] ?? [] as $nnName => $nnField)
+                                                                                                    <div>
+                                                                                                        <label class="block text-xs font-medium text-slate-500 mb-1">{{ ucwords(str_replace('_', ' ', $nnName)) }}</label>
+                                                                                                        @if(in_array($nnField['type'], ['string','email','url']))
+                                                                                                            <input type="text" x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                                        @elseif($nnField['type'] === 'text')
+                                                                                                            <textarea x-model="nr['{{ $nnName }}']" rows="3" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500 resize-y"></textarea>
+                                                                                                        @elseif(in_array($nnField['type'], ['integer','decimal','float']))
+                                                                                                            <input type="number" x-model.number="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                                        @elseif($nnField['type'] === 'boolean')
+                                                                                                            <button type="button" @click="nr['{{ $nnName }}'] = !nr['{{ $nnName }}']" class="flex items-center gap-2">
+                                                                                                                <div class="relative w-10 h-5 rounded-full transition-colors" :class="nr['{{ $nnName }}'] ? 'bg-blue-600' : 'bg-slate-200'">
+                                                                                                                    <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" :class="nr['{{ $nnName }}'] ? 'translate-x-5' : ''"></div>
+                                                                                                                </div>
+                                                                                                            </button>
+                                                                                                        @elseif($nnField['type'] === 'enumeration')
+                                                                                                            <select x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                                                <option value="">— Select —</option>
+                                                                                                                @foreach(explode("\n", trim($nnField['enumValues'] ?? '')) as $nnOpt)
+                                                                                                                    @php $nnOpt = trim($nnOpt); @endphp
+                                                                                                                    @if($nnOpt)<option value="{{ $nnOpt }}">{{ $nnOpt }}</option>@endif
+                                                                                                                @endforeach
+                                                                                                            </select>
+                                                                                                        @elseif($nnField['type'] === 'media')
+                                                                                                            @php $nnMultiple = !empty($nnField['multiple']); @endphp
+                                                                                                            @if($nnMultiple)
+                                                                                                            <div x-data="{ _mids: (() => { try { const v = nr['{{ $nnName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
+                                                                                                                 x-init="$watch('_mids', v => nr['{{ $nnName }}'] = v)">
+                                                                                                                <div x-show="_mids.length > 0" class="flex flex-wrap gap-1.5 mb-2">
+                                                                                                                    @foreach($mediaItems as $m)
+                                                                                                                        <div x-show="_mids.includes({{ $m->id }})" class="relative group">
+                                                                                                                            @if($m->isImage())<img src="{{ $m->url }}" class="h-12 w-12 object-cover rounded">@else<div class="h-12 w-12 bg-slate-100 flex items-center justify-center text-slate-500 text-xs rounded">{{ $m->ext }}</div>@endif
+                                                                                                                            <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }}); talos.markDirty()" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center">✕</button>
+                                                                                                                        </div>
+                                                                                                                    @endforeach
+                                                                                                                </div>
+                                                                                                                <button type="button" @click="_mshow = true" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
+                                                                                                                    <span x-text="_mids.length ? 'Add / change' : 'Select from library'"></span>
+                                                                                                                </button>
+                                                                                                                <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
+                                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                                        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+                                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                                            @foreach($mediaItems as $m)
+                                                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                                    <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                                                                                </button>
+                                                                                                                            @endforeach
+                                                                                                                        </div>
+                                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                                            <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                                                                            <div class="flex items-center gap-3"><span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span><button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button><button type="button" @click="_mshow = false" class="text-sm text-blue-600 font-medium">Done</button></div>
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                            @else
+                                                                                                            <div x-data="{ _mid: nr['{{ $nnName }}'] ? parseInt(nr['{{ $nnName }}']) : null, _mshow: false }"
+                                                                                                                 x-init="$watch('_mid', v => nr['{{ $nnName }}'] = v)">
+                                                                                                                <div x-show="_mid" class="mb-2">
+                                                                                                                    @foreach($mediaItems as $m)
+                                                                                                                        <div x-show="_mid === {{ $m->id }}">@if($m->isImage())<img src="{{ $m->url }}" class="h-14 w-auto object-cover rounded">@else<p class="text-xs text-slate-500">{{ $m->name }}</p>@endif</div>
+                                                                                                                    @endforeach
+                                                                                                                </div>
+                                                                                                                <button type="button" @click="_mshow = true" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
+                                                                                                                    <span x-text="_mid ? 'Change' : 'Select from library'"></span>
+                                                                                                                </button>
+                                                                                                                <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
+                                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                                        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+                                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                                            @foreach($mediaItems as $m)
+                                                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                                    <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                                                                                </button>
+                                                                                                                            @endforeach
+                                                                                                                        </div>
+                                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                                            <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                                                                            <button type="button" @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                            @endif
+                                                                                                        @else
+                                                                                                            <input type="text" x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                                        @endif
+                                                                                                    </div>
+                                                                                                @endforeach
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </template>
+                                                                                </div>
+                                                                                <button type="button" @click="nestedRows.push({}); nestedOpen[nestedRows.length-1] = true; talos.markDirty()"
+                                                                                        class="mt-2 w-full py-2 flex items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 hover:border-blue-500 text-slate-400 hover:text-blue-600 text-xs font-medium transition-all">
+                                                                                    + Add entry
+                                                                                </button>
+                                                                            </div>
+                                                                        @else
+                                                                            {{-- Nested single component inside repeatable parent --}}
+                                                                            <div class="space-y-3 p-3 bg-white border border-slate-200 rounded-lg">
+                                                                                @foreach($nestedSchema['attributes'] ?? [] as $nnName => $nnField)
+                                                                                    <div>
+                                                                                        <label class="block text-xs font-medium text-slate-500 mb-1">{{ ucwords(str_replace('_', ' ', $nnName)) }}</label>
+                                                                                        @if(in_array($nnField['type'], ['string','email','url']))
+                                                                                            <input type="text" x-model="(row['{{ $subName }}'] ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                        @elseif($nnField['type'] === 'text')
+                                                                                            <textarea x-model="(row['{{ $subName }}'] ??= {})['{{ $nnName }}']" rows="3" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500 resize-y"></textarea>
+                                                                                        @elseif(in_array($nnField['type'], ['integer','decimal','float']))
+                                                                                            <input type="number" x-model.number="(row['{{ $subName }}'] ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                        @elseif($nnField['type'] === 'boolean')
+                                                                                            <button type="button" @click="const o = (row['{{ $subName }}'] ??= {}); o['{{ $nnName }}'] = !o['{{ $nnName }}']" class="flex items-center gap-2">
+                                                                                                <div class="relative w-10 h-5 rounded-full transition-colors" :class="row['{{ $subName }}']?.['{{ $nnName }}'] ? 'bg-blue-600' : 'bg-slate-200'">
+                                                                                                    <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" :class="row['{{ $subName }}']?.['{{ $nnName }}'] ? 'translate-x-5' : ''"></div>
+                                                                                                </div>
+                                                                                            </button>
+                                                                                        @elseif($nnField['type'] === 'enumeration')
+                                                                                            <select x-model="(row['{{ $subName }}'] ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                                <option value="">— Select —</option>
+                                                                                                @foreach(explode("\n", trim($nnField['enumValues'] ?? '')) as $nnOpt)
+                                                                                                    @php $nnOpt = trim($nnOpt); @endphp
+                                                                                                    @if($nnOpt)<option value="{{ $nnOpt }}">{{ $nnOpt }}</option>@endif
+                                                                                                @endforeach
+                                                                                            </select>
+                                                                                        @elseif($nnField['type'] === 'media')
+                                                                                            @php $nnMultiple = !empty($nnField['multiple']); @endphp
+                                                                                            @if($nnMultiple)
+                                                                                            <div x-data="{ _mids: (() => { try { const v = (row['{{ $subName }}'] ?? {})['{{ $nnName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
+                                                                                                 x-init="$watch('_mids', v => (row['{{ $subName }}'] ??= {})['{{ $nnName }}'] = v)">
+                                                                                                <div x-show="_mids.length > 0" class="flex flex-wrap gap-1.5 mb-2">
+                                                                                                    @foreach($mediaItems as $m)
+                                                                                                        <div x-show="_mids.includes({{ $m->id }})" class="relative group">
+                                                                                                            @if($m->isImage())<img src="{{ $m->url }}" class="h-12 w-12 object-cover rounded">@else<div class="h-12 w-12 bg-slate-100 flex items-center justify-center text-slate-500 text-xs rounded">{{ $m->ext }}</div>@endif
+                                                                                                            <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }}); talos.markDirty()" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center">✕</button>
+                                                                                                        </div>
+                                                                                                    @endforeach
+                                                                                                </div>
+                                                                                                <button type="button" @click="_mshow = true" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
+                                                                                                    <span x-text="_mids.length ? 'Add / change' : 'Select from library'"></span>
+                                                                                                </button>
+                                                                                                <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
+                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                            @foreach($mediaItems as $m)
+                                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                    <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                                                                </button>
+                                                                                                            @endforeach
+                                                                                                        </div>
+                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                            <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                                                            <div class="flex items-center gap-3"><span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span><button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button><button type="button" @click="_mshow = false" class="text-sm text-blue-600 font-medium">Done</button></div>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            @else
+                                                                                            <div x-data="{ _mid: (row['{{ $subName }}'] ?? {})['{{ $nnName }}'] ? parseInt((row['{{ $subName }}'] ?? {})['{{ $nnName }}']) : null, _mshow: false }"
+                                                                                                 x-init="$watch('_mid', v => (row['{{ $subName }}'] ??= {})['{{ $nnName }}'] = v)">
+                                                                                                <div x-show="_mid" class="mb-2">
+                                                                                                    @foreach($mediaItems as $m)
+                                                                                                        <div x-show="_mid === {{ $m->id }}">@if($m->isImage())<img src="{{ $m->url }}" class="h-14 w-auto object-cover rounded">@else<p class="text-xs text-slate-500">{{ $m->name }}</p>@endif</div>
+                                                                                                    @endforeach
+                                                                                                </div>
+                                                                                                <button type="button" @click="_mshow = true" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
+                                                                                                    <span x-text="_mid ? 'Change' : 'Select from library'"></span>
+                                                                                                </button>
+                                                                                                <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
+                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                            @foreach($mediaItems as $m)
+                                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                    <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                                                                </button>
+                                                                                                            @endforeach
+                                                                                                        </div>
+                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                            <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                                                            <button type="button" @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            @endif
+                                                                                        @else
+                                                                                            <input type="text" x-model="(row['{{ $subName }}'] ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                        @endif
+                                                                                    </div>
+                                                                                @endforeach
+                                                                            </div>
+                                                                        @endif
+                                                                    @else
+                                                                        <p class="text-xs text-slate-400 italic">Component "{{ $nestedUid }}" not found.</p>
+                                                                    @endif
                                                                 @else
                                                                     <input type="text" x-model="row['{{ $subName }}']" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
                                                                 @endif
@@ -788,6 +1015,231 @@
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    @endif
+                                                @elseif($subField['type'] === 'component')
+                                                    @php
+                                                        $nestedUid    = $subField['components'][0] ?? null;
+                                                        $nestedSchema = $nestedUid ? ($componentMap[$nestedUid] ?? null) : null;
+                                                        $nestedRep    = !empty($subField['repeatable']);
+                                                    @endphp
+                                                    @if($nestedSchema)
+                                                        @if($nestedRep)
+                                                            <div x-data="{
+                                                                    nestedRows: (() => { try { const v = d.{{ $subName }}; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(),
+                                                                    nestedOpen: {}
+                                                                }"
+                                                                 x-init="$watch('nestedRows', v => d.{{ $subName }} = v)">
+                                                                <div class="space-y-2">
+                                                                    <template x-for="(nr, ni) in nestedRows" :key="ni">
+                                                                        <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                                                                            <div class="flex items-center justify-between px-3 py-2 bg-slate-50 cursor-pointer"
+                                                                                 @click="nestedOpen[ni] = !nestedOpen[ni]">
+                                                                                <span class="text-xs font-medium text-slate-600" x-text="'Entry #' + (ni + 1)"></span>
+                                                                                <div class="flex items-center gap-2">
+                                                                                    <button type="button" @click.stop="nestedRows.splice(ni, 1); talos.markDirty()" class="text-slate-300 hover:text-red-500 text-xs">✕</button>
+                                                                                    <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="nestedOpen[ni] ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div x-show="nestedOpen[ni]" class="p-3 space-y-3">
+                                                                                @foreach($nestedSchema['attributes'] ?? [] as $nnName => $nnField)
+                                                                                    <div>
+                                                                                        <label class="block text-xs font-medium text-slate-500 mb-1">{{ ucwords(str_replace('_', ' ', $nnName)) }}</label>
+                                                                                        @if(in_array($nnField['type'], ['string','email','url']))
+                                                                                            <input type="text" x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                        @elseif($nnField['type'] === 'text')
+                                                                                            <textarea x-model="nr['{{ $nnName }}']" rows="3" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500 resize-y"></textarea>
+                                                                                        @elseif(in_array($nnField['type'], ['integer','decimal','float']))
+                                                                                            <input type="number" x-model.number="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                        @elseif($nnField['type'] === 'boolean')
+                                                                                            <button type="button" @click="nr['{{ $nnName }}'] = !nr['{{ $nnName }}']" class="flex items-center gap-2">
+                                                                                                <div class="relative w-10 h-5 rounded-full transition-colors" :class="nr['{{ $nnName }}'] ? 'bg-blue-600' : 'bg-slate-200'">
+                                                                                                    <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" :class="nr['{{ $nnName }}'] ? 'translate-x-5' : ''"></div>
+                                                                                                </div>
+                                                                                            </button>
+                                                                                        @elseif($nnField['type'] === 'enumeration')
+                                                                                            <select x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                                <option value="">— Select —</option>
+                                                                                                @foreach(explode("\n", trim($nnField['enumValues'] ?? '')) as $nnOpt)
+                                                                                                    @php $nnOpt = trim($nnOpt); @endphp
+                                                                                                    @if($nnOpt)<option value="{{ $nnOpt }}">{{ $nnOpt }}</option>@endif
+                                                                                                @endforeach
+                                                                                            </select>
+                                                                                        @elseif($nnField['type'] === 'media')
+                                                                                            @php $nnMultiple = !empty($nnField['multiple']); @endphp
+                                                                                            @if($nnMultiple)
+                                                                                            <div x-data="{ _mids: (() => { try { const v = nr['{{ $nnName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
+                                                                                                 x-init="$watch('_mids', v => nr['{{ $nnName }}'] = v)">
+                                                                                                <div x-show="_mids.length > 0" class="flex flex-wrap gap-1.5 mb-2">
+                                                                                                    @foreach($mediaItems as $m)
+                                                                                                        <div x-show="_mids.includes({{ $m->id }})" class="relative group">
+                                                                                                            @if($m->isImage())<img src="{{ $m->url }}" class="h-12 w-12 object-cover rounded">@else<div class="h-12 w-12 bg-slate-100 flex items-center justify-center text-slate-500 text-xs rounded">{{ $m->ext }}</div>@endif
+                                                                                                            <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }}); talos.markDirty()" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center">✕</button>
+                                                                                                        </div>
+                                                                                                    @endforeach
+                                                                                                </div>
+                                                                                                <button type="button" @click="_mshow = true" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
+                                                                                                    <span x-text="_mids.length ? 'Add / change' : 'Select from library'"></span>
+                                                                                                </button>
+                                                                                                <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
+                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                            @foreach($mediaItems as $m)
+                                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                    <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                                                                </button>
+                                                                                                            @endforeach
+                                                                                                        </div>
+                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                            <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                                                            <div class="flex items-center gap-3"><span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span><button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button><button type="button" @click="_mshow = false" class="text-sm text-blue-600 font-medium">Done</button></div>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            @else
+                                                                                            <div x-data="{ _mid: nr['{{ $nnName }}'] ? parseInt(nr['{{ $nnName }}']) : null, _mshow: false }"
+                                                                                                 x-init="$watch('_mid', v => nr['{{ $nnName }}'] = v)">
+                                                                                                <div x-show="_mid" class="mb-2">
+                                                                                                    @foreach($mediaItems as $m)
+                                                                                                        <div x-show="_mid === {{ $m->id }}">@if($m->isImage())<img src="{{ $m->url }}" class="h-14 w-auto object-cover rounded">@else<p class="text-xs text-slate-500">{{ $m->name }}</p>@endif</div>
+                                                                                                    @endforeach
+                                                                                                </div>
+                                                                                                <button type="button" @click="_mshow = true" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
+                                                                                                    <span x-text="_mid ? 'Change' : 'Select from library'"></span>
+                                                                                                </button>
+                                                                                                <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
+                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                            @foreach($mediaItems as $m)
+                                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                    <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                                                                </button>
+                                                                                                            @endforeach
+                                                                                                        </div>
+                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                            <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                                                            <button type="button" @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            @endif
+                                                                                        @else
+                                                                                            <input type="text" x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                        @endif
+                                                                                    </div>
+                                                                                @endforeach
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
+                                                                </div>
+                                                                <button type="button" @click="nestedRows.push({}); nestedOpen[nestedRows.length-1] = true; talos.markDirty()"
+                                                                        class="mt-2 w-full py-2 flex items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 hover:border-blue-500 text-slate-400 hover:text-blue-600 text-xs font-medium transition-all">
+                                                                    + Add entry
+                                                                </button>
+                                                            </div>
+                                                        @else
+                                                            <div class="space-y-3 p-3 bg-white border border-slate-200 rounded-lg">
+                                                                @foreach($nestedSchema['attributes'] ?? [] as $nnName => $nnField)
+                                                                    <div>
+                                                                        <label class="block text-xs font-medium text-slate-500 mb-1">{{ ucwords(str_replace('_', ' ', $nnName)) }}</label>
+                                                                        @if(in_array($nnField['type'], ['string','email','url']))
+                                                                            <input type="text" x-model="(d.{{ $subName }} ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                        @elseif($nnField['type'] === 'text')
+                                                                            <textarea x-model="(d.{{ $subName }} ??= {})['{{ $nnName }}']" rows="3" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500 resize-y"></textarea>
+                                                                        @elseif(in_array($nnField['type'], ['integer','decimal','float']))
+                                                                            <input type="number" x-model.number="(d.{{ $subName }} ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                        @elseif($nnField['type'] === 'boolean')
+                                                                            <button type="button" @click="const o = (d.{{ $subName }} ??= {}); o['{{ $nnName }}'] = !o['{{ $nnName }}']" class="flex items-center gap-2">
+                                                                                <div class="relative w-10 h-5 rounded-full transition-colors" :class="d.{{ $subName }}?.['{{ $nnName }}'] ? 'bg-blue-600' : 'bg-slate-200'">
+                                                                                    <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" :class="d.{{ $subName }}?.['{{ $nnName }}'] ? 'translate-x-5' : ''"></div>
+                                                                                </div>
+                                                                            </button>
+                                                                        @elseif($nnField['type'] === 'enumeration')
+                                                                            <select x-model="(d.{{ $subName }} ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                <option value="">— Select —</option>
+                                                                                @foreach(explode("\n", trim($nnField['enumValues'] ?? '')) as $nnOpt)
+                                                                                    @php $nnOpt = trim($nnOpt); @endphp
+                                                                                    @if($nnOpt)<option value="{{ $nnOpt }}">{{ $nnOpt }}</option>@endif
+                                                                                @endforeach
+                                                                            </select>
+                                                                        @elseif($nnField['type'] === 'media')
+                                                                            @php $nnMultiple = !empty($nnField['multiple']); @endphp
+                                                                            @if($nnMultiple)
+                                                                            <div x-data="{ _mids: (() => { try { const v = (d.{{ $subName }} ?? {})['{{ $nnName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
+                                                                                 x-init="$watch('_mids', v => (d.{{ $subName }} ??= {})['{{ $nnName }}'] = v)">
+                                                                                <div x-show="_mids.length > 0" class="flex flex-wrap gap-1.5 mb-2">
+                                                                                    @foreach($mediaItems as $m)
+                                                                                        <div x-show="_mids.includes({{ $m->id }})" class="relative group">
+                                                                                            @if($m->isImage())<img src="{{ $m->url }}" class="h-12 w-12 object-cover rounded">@else<div class="h-12 w-12 bg-slate-100 flex items-center justify-center text-slate-500 text-xs rounded">{{ $m->ext }}</div>@endif
+                                                                                            <button type="button" @click="_mids = _mids.filter(id => id !== {{ $m->id }}); talos.markDirty()" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center">✕</button>
+                                                                                        </div>
+                                                                                    @endforeach
+                                                                                </div>
+                                                                                <button type="button" @click="_mshow = true" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
+                                                                                    <span x-text="_mids.length ? 'Add / change' : 'Select from library'"></span>
+                                                                                </button>
+                                                                                <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
+                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                            @foreach($mediaItems as $m)
+                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                    <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                                                </button>
+                                                                                            @endforeach
+                                                                                        </div>
+                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                            <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                                            <div class="flex items-center gap-3"><span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span><button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button><button type="button" @click="_mshow = false" class="text-sm text-blue-600 font-medium">Done</button></div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            @else
+                                                                            <div x-data="{ _mid: (d.{{ $subName }} ?? {})['{{ $nnName }}'] ? parseInt((d.{{ $subName }} ?? {})['{{ $nnName }}']) : null, _mshow: false }"
+                                                                                 x-init="$watch('_mid', v => (d.{{ $subName }} ??= {})['{{ $nnName }}'] = v)">
+                                                                                <div x-show="_mid" class="mb-2">
+                                                                                    @foreach($mediaItems as $m)
+                                                                                        <div x-show="_mid === {{ $m->id }}">@if($m->isImage())<img src="{{ $m->url }}" class="h-14 w-auto object-cover rounded">@else<p class="text-xs text-slate-500">{{ $m->name }}</p>@endif</div>
+                                                                                    @endforeach
+                                                                                </div>
+                                                                                <button type="button" @click="_mshow = true" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
+                                                                                    <span x-text="_mid ? 'Change' : 'Select from library'"></span>
+                                                                                </button>
+                                                                                <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
+                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                            @foreach($mediaItems as $m)
+                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
+                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                    <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
+                                                                                                </button>
+                                                                                            @endforeach
+                                                                                        </div>
+                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                            <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
+                                                                                            <button type="button" @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            @endif
+                                                                        @else
+                                                                            <input type="text" x-model="(d.{{ $subName }} ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                        @endif
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
+                                                    @else
+                                                        <p class="text-xs text-slate-400 italic">Component "{{ $nestedUid }}" not found.</p>
                                                     @endif
                                                 @else
                                                     <input type="text" x-model="d.{{ $subName }}" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">

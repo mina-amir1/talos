@@ -44,7 +44,12 @@ class ComponentController extends Controller
             abort(404);
         }
 
-        return view('talos.components.edit', compact('component', 'uid'));
+        $otherComponents = collect($this->service->all())
+            ->filter(fn($c) => $c['__uid'] !== $uid)
+            ->values()
+            ->all();
+
+        return view('talos.components.edit', compact('component', 'uid', 'otherComponents'));
     }
 
     public function update(Request $request, string $uid)
