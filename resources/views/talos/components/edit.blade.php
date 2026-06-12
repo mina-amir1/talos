@@ -219,6 +219,33 @@
                     </div>
                 </template>
 
+                {{-- Enumeration --}}
+                <template x-if="editingField && editingField.type === 'enumeration'">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-500 mb-1.5">
+                                Values <span class="text-slate-400 font-normal">(one per line)</span>
+                            </label>
+                            <textarea x-model="editingField.enumValues" rows="5"
+                                      placeholder="Option A&#10;Option B&#10;Option C"
+                                      class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500 resize-y font-mono"></textarea>
+                        </div>
+                        <div @click="editingField.multiple = !editingField.multiple"
+                             class="flex items-center justify-between p-4 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-100/50 transition-colors">
+                            <div>
+                                <p class="text-sm font-medium text-slate-800">Allow multiple selection</p>
+                                <p class="text-xs text-slate-400">Select more than one option at once</p>
+                            </div>
+                            <div class="relative flex-shrink-0">
+                                <div class="w-11 h-6 rounded-full transition-colors" :class="editingField.multiple ? 'bg-blue-600' : 'bg-slate-300'">
+                                    <div class="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all"
+                                         :class="editingField.multiple ? 'left-6' : 'left-1'"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
                 {{-- Media --}}
                 <template x-if="editingField && editingField.type === 'media'">
                     <div @click="editingField.multiple = !editingField.multiple"

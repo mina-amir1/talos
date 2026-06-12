@@ -31,6 +31,14 @@ class ComponentController extends Controller
 
         $component = $this->service->create($request->all());
 
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'uid'         => $component['__uid'],
+                'displayName' => $component['info']['displayName'],
+                'category'    => $component['__category'],
+            ]);
+        }
+
         return redirect()
             ->route('talos.components.edit', ['uid' => $component['__uid']])
             ->with('success', 'Component created. Now add fields.');

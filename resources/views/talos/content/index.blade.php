@@ -98,6 +98,8 @@
                                         <span class="{{ $val ? 'text-emerald-700' : 'text-slate-400' }}">
                                             {{ $val ? 'Yes' : 'No' }}
                                         </span>
+                                    @elseif(is_array($val))
+                                        <span class="text-slate-500">{{ implode(', ', $val) }}</span>
                                     @elseif(is_string($val) && strlen($val) > 60)
                                         {{ Str::limit($val, 60) }}
                                     @else

@@ -68,6 +68,10 @@ class DynamicModelService
                 'datetime'                                   => 'datetime',
                 default                                      => 'string',
             };
+
+            if (($field['type'] ?? '') === 'enumeration' && !empty($field['multiple'])) {
+                $casts[$name] = 'array';
+            }
         }
 
         return $casts;

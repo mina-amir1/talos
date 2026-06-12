@@ -391,6 +391,18 @@ class ContentManagerController extends Controller
                 continue;
             }
 
+            if ($type === 'enumeration' && !empty($field['multiple'])) {
+                $rules[$name] = ($field['required'] ?? false) ? 'required|array' : 'nullable|array';
+                if (!empty($field['enumValues'])) {
+                    $values = array_filter(array_map('trim', explode("\n", $field['enumValues'])));
+                    if (!empty($values)) {
+                        $rules[$name . '.*'] = 'in:' . implode(',', $values);
+                        $messages[$name . '.*.in'] = "The selected {$name} is invalid.";
+                    }
+                }
+                continue;
+            }
+
             if ($type === 'repeater') {
                 foreach ($field['subFields'] ?? [] as $subName => $subField) {
                     $key      = "{$name}.*.{$subName}";

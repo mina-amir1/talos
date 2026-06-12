@@ -51,6 +51,9 @@
     $locales     = $locales ?? app(\App\Services\LocaleService::class)->all();
     $siblings    = $siblings ?? [];
 
+    // Shared helper: parse enum options from schema string
+    $enumOpts = fn($f) => array_values(array_filter(array_map('trim', explode("\n", $f['enumValues'] ?? ''))));
+
     // Build uid → schema map for component fields
     $componentMap = [];
     foreach ($components as $comp) {
@@ -173,19 +176,74 @@
                                         : '';
                                 @endphp
                                 @if($isMultiple)
-                                    <select name="{{ $name }}[]" multiple size="6"
-                                            class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
-                                        @foreach($relOpts['entries'] as $relEntry)
-                                            <option value="{{ $relEntry->id }}"
-                                                    {{ in_array($relEntry->id, $selected) ? 'selected' : '' }}>
-                                                #{{ $relEntry->id }}{{ $entryLabel($relEntry) }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <p class="text-xs text-slate-400 mt-1">Hold Ctrl / Cmd to select multiple.</p>
+                                    @php
+                                        $relEntriesJson  = json_encode(collect($relOpts['entries'])->map(fn($e) => ['id' => $e->id, 'label' => '#' . $e->id . $entryLabel($e)])->values()->all());
+                                        $relSelectedJson = json_encode(array_values(array_map('intval', $selected)));
+                                    @endphp
+                                    <div x-data="relPicker({{ $relEntriesJson }}, {{ $relSelectedJson }})">
+
+                                        {{-- Hidden inputs for form submission --}}
+                                        <template x-for="id in selected" :key="id">
+                                            <input type="hidden" name="{{ $name }}[]" :value="id">
+                                        </template>
+
+                                        {{-- Selected chips --}}
+                                        <div class="flex flex-wrap gap-1.5 mb-3" x-show="selected.length > 0">
+                                            <template x-for="id in selected" :key="'chip-' + id">
+                                                <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                                    <span x-text="labelFor(id)"></span>
+                                                    <button type="button" @click.stop="toggle(id)"
+                                                            class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-200 transition-colors flex-shrink-0">
+                                                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                                                        </svg>
+                                                    </button>
+                                                </span>
+                                            </template>
+                                        </div>
+
+                                        {{-- Search --}}
+                                        <div class="relative mb-2">
+                                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                            </svg>
+                                            <input type="text" x-model="search" placeholder="Search…"
+                                                   class="w-full pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all">
+                                            <button type="button" x-show="search" @click.stop="search = ''"
+                                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        {{-- Entry list --}}
+                                        <div class="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-56 overflow-y-auto">
+                                            <template x-if="filtered().length === 0">
+                                                <div class="px-4 py-4 text-sm text-slate-400 text-center">No results</div>
+                                            </template>
+                                            <template x-for="entry in filtered()" :key="entry.id">
+                                                <div class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors select-none"
+                                                     :class="selected.includes(entry.id) ? 'bg-blue-50 hover:bg-blue-50/80' : 'bg-white hover:bg-slate-50'"
+                                                     @click="toggle(entry.id)">
+                                                    <div class="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all duration-100"
+                                                         :class="selected.includes(entry.id) ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white'">
+                                                        <svg x-show="selected.includes(entry.id)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                                        </svg>
+                                                    </div>
+                                                    <span class="text-sm text-slate-700" x-text="entry.label"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        {{-- Footer count --}}
+                                        <p class="text-xs text-slate-400 mt-2"
+                                           x-text="selected.length ? selected.length + ' selected of ' + entries.length : entries.length + ' available'"></p>
+                                    </div>
                                 @else
                                     <select name="{{ $name }}"
-                                            class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
+                                            class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all">
                                         <option value="">— None —</option>
                                         @foreach($relOpts['entries'] as $relEntry)
                                             <option value="{{ $relEntry->id }}"
@@ -250,16 +308,54 @@
 
                         {{-- ── Enumeration ── --}}
                         @case('enumeration')
-                            <select name="{{ $name }}" {{ $required ? 'required' : '' }}
-                                    class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
-                                @if(!$required)<option value="">— Select —</option>@endif
-                                @foreach(explode("\n", trim($field['enumValues'] ?? '')) as $opt)
-                                    @php $opt = trim($opt); @endphp
-                                    @if($opt)
+                            @php
+                                $eOpts = $enumOpts($field);
+                                $eMulti = !empty($field['multiple']);
+                            @endphp
+                            @if($eMulti)
+                                @php
+                                    $eSel = is_array($value) ? $value : ($value ? [$value] : []);
+                                @endphp
+                                <div x-data="enumPicker({{ json_encode($eOpts) }}, {{ json_encode($eSel) }})">
+                                    <template x-for="v in selected" :key="v">
+                                        <input type="hidden" name="{{ $name }}[]" :value="v">
+                                    </template>
+                                    <div class="flex flex-wrap gap-1.5 mb-2" x-show="selected.length > 0">
+                                        <template x-for="v in selected" :key="'c'+v">
+                                            <span class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                <span x-text="v"></span>
+                                                <button type="button" @click.stop="toggle(v)" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-purple-200 transition-colors">
+                                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                </button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <div class="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+                                        <template x-for="opt in opts" :key="opt">
+                                            <div class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors select-none"
+                                                 :class="selected.includes(opt) ? 'bg-purple-50 hover:bg-purple-50/80' : 'bg-white hover:bg-slate-50'"
+                                                 @click="toggle(opt)">
+                                                <div class="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all"
+                                                     :class="selected.includes(opt) ? 'bg-purple-600 border-purple-600' : 'border-slate-300 bg-white'">
+                                                    <svg x-show="selected.includes(opt)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                                    </svg>
+                                                </div>
+                                                <span class="text-sm text-slate-700" x-text="opt"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-2" x-text="selected.length ? selected.length + ' selected' : 'None selected'"></p>
+                                </div>
+                            @else
+                                <select name="{{ $name }}" {{ $required ? 'required' : '' }}
+                                        class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
+                                    @if(!$required)<option value="">— Select —</option>@endif
+                                    @foreach($eOpts as $opt)
                                         <option value="{{ $opt }}" {{ $value === $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                                    @endif
-                                @endforeach
-                            </select>
+                                    @endforeach
+                                </select>
+                            @endif
                             @break
 
                         {{-- ── Raw JSON ── --}}
@@ -512,13 +608,41 @@
                                                                 @elseif(in_array($subField['type'], ['date','datetime','time']))
                                                                     <input type="{{ $subField['type'] }}" x-model="row['{{ $subName }}']" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
                                                                 @elseif($subField['type'] === 'enumeration')
-                                                                    <select x-model="row['{{ $subName }}']" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
-                                                                        <option value="">— Select —</option>
-                                                                        @foreach(explode("\n", trim($subField['enumValues'] ?? '')) as $eOpt)
-                                                                            @php $eOpt = trim($eOpt); @endphp
-                                                                            @if($eOpt)<option value="{{ $eOpt }}">{{ $eOpt }}</option>@endif
-                                                                        @endforeach
-                                                                    </select>
+                                                                    @php $_sfOpts = $enumOpts($subField); $_sfMulti = !empty($subField['multiple']); @endphp
+                                                                    @if($_sfMulti)
+                                                                        <div x-data="{ _opts: {{ json_encode($_sfOpts) }} }">
+                                                                            <div class="flex flex-wrap gap-1 mb-1.5" x-show="enumArr(row['{{ $subName }}']).length > 0">
+                                                                                <template x-for="_ev in enumArr(row['{{ $subName }}'])" :key="'c'+_ev">
+                                                                                    <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                                                        <span x-text="_ev"></span>
+                                                                                        <button type="button" @click.stop="row['{{ $subName }}'] = enumToggle(row['{{ $subName }}'], _ev)" class="w-3.5 h-3.5 flex items-center justify-center rounded-full hover:bg-purple-200">
+                                                                                            <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                                                        </button>
+                                                                                    </span>
+                                                                                </template>
+                                                                            </div>
+                                                                            <div class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                                                                                <template x-for="_eo in _opts" :key="_eo">
+                                                                                    <div class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors select-none"
+                                                                                         :class="enumArr(row['{{ $subName }}']).includes(_eo) ? 'bg-purple-50' : 'bg-white hover:bg-slate-50'"
+                                                                                         @click="row['{{ $subName }}'] = enumToggle(row['{{ $subName }}'], _eo)">
+                                                                                        <div class="w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-all"
+                                                                                             :class="enumArr(row['{{ $subName }}']).includes(_eo) ? 'bg-purple-600 border-purple-600' : 'border-slate-300 bg-white'">
+                                                                                            <svg x-show="enumArr(row['{{ $subName }}']).includes(_eo)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                                                        </div>
+                                                                                        <span class="text-sm text-slate-700" x-text="_eo"></span>
+                                                                                    </div>
+                                                                                </template>
+                                                                            </div>
+                                                                        </div>
+                                                                    @else
+                                                                        <select x-model="row['{{ $subName }}']" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
+                                                                            <option value="">— Select —</option>
+                                                                            @foreach($_sfOpts as $eOpt)
+                                                                                <option value="{{ $eOpt }}">{{ $eOpt }}</option>
+                                                                            @endforeach
+                                                                        </select>
+                                                                    @endif
                                                                 @elseif($subField['type'] === 'media')
                                                                     @php $subIsMultiple = !empty($subField['multiple']); @endphp
                                                                     @if($subIsMultiple)
@@ -666,13 +790,38 @@
                                                                                                                 </div>
                                                                                                             </button>
                                                                                                         @elseif($nnField['type'] === 'enumeration')
-                                                                                                            <select x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
-                                                                                                                <option value="">— Select —</option>
-                                                                                                                @foreach(explode("\n", trim($nnField['enumValues'] ?? '')) as $nnOpt)
-                                                                                                                    @php $nnOpt = trim($nnOpt); @endphp
-                                                                                                                    @if($nnOpt)<option value="{{ $nnOpt }}">{{ $nnOpt }}</option>@endif
-                                                                                                                @endforeach
-                                                                                                            </select>
+                                                                                                            @php $_nnOpts = $enumOpts($nnField); $_nnMulti = !empty($nnField['multiple']); @endphp
+                                                                                                            @if($_nnMulti)
+                                                                                                                <div x-data="{ _opts: {{ json_encode($_nnOpts) }} }">
+                                                                                                                    <div class="flex flex-wrap gap-1 mb-1" x-show="enumArr(nr['{{ $nnName }}']).length > 0">
+                                                                                                                        <template x-for="_ev in enumArr(nr['{{ $nnName }}'])" :key="'c'+_ev">
+                                                                                                                            <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                                                                                                <span x-text="_ev"></span>
+                                                                                                                                <button type="button" @click.stop="nr['{{ $nnName }}'] = enumToggle(nr['{{ $nnName }}'], _ev)" class="w-3 h-3 flex items-center justify-center rounded-full hover:bg-purple-200"><svg class="w-1.5 h-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                                                                                                            </span>
+                                                                                                                        </template>
+                                                                                                                    </div>
+                                                                                                                    <div class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                                                                                                                        <template x-for="_eo in _opts" :key="_eo">
+                                                                                                                            <div class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors select-none text-xs"
+                                                                                                                                 :class="enumArr(nr['{{ $nnName }}']).includes(_eo) ? 'bg-purple-50' : 'bg-white hover:bg-slate-50'"
+                                                                                                                                 @click="nr['{{ $nnName }}'] = enumToggle(nr['{{ $nnName }}'], _eo)">
+                                                                                                                                <div class="w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-all" :class="enumArr(nr['{{ $nnName }}']).includes(_eo) ? 'bg-purple-600 border-purple-600' : 'border-slate-300 bg-white'">
+                                                                                                                                    <svg x-show="enumArr(nr['{{ $nnName }}']).includes(_eo)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                                                                                                </div>
+                                                                                                                                <span class="text-slate-700" x-text="_eo"></span>
+                                                                                                                            </div>
+                                                                                                                        </template>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            @else
+                                                                                                                <select x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                                                    <option value="">— Select —</option>
+                                                                                                                    @foreach($_nnOpts as $nnOpt)
+                                                                                                                        <option value="{{ $nnOpt }}">{{ $nnOpt }}</option>
+                                                                                                                    @endforeach
+                                                                                                                </select>
+                                                                                                            @endif
                                                                                                         @elseif($nnField['type'] === 'media')
                                                                                                             @php $nnMultiple = !empty($nnField['multiple']); @endphp
                                                                                                             @if($nnMultiple)
@@ -770,13 +919,38 @@
                                                                                                 </div>
                                                                                             </button>
                                                                                         @elseif($nnField['type'] === 'enumeration')
-                                                                                            <select x-model="(row['{{ $subName }}'] ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
-                                                                                                <option value="">— Select —</option>
-                                                                                                @foreach(explode("\n", trim($nnField['enumValues'] ?? '')) as $nnOpt)
-                                                                                                    @php $nnOpt = trim($nnOpt); @endphp
-                                                                                                    @if($nnOpt)<option value="{{ $nnOpt }}">{{ $nnOpt }}</option>@endif
-                                                                                                @endforeach
-                                                                                            </select>
+                                                                                            @php $_nnOpts3 = $enumOpts($nnField); $_nnMulti3 = !empty($nnField['multiple']); @endphp
+                                                                                            @if($_nnMulti3)
+                                                                                                <div x-data="{ _opts: {{ json_encode($_nnOpts3) }} }">
+                                                                                                    <div class="flex flex-wrap gap-1 mb-1" x-show="enumArr((row['{{ $subName }}'] ??= {})['{{ $nnName }}']).length > 0">
+                                                                                                        <template x-for="_ev in enumArr((row['{{ $subName }}'] ?? {})['{{ $nnName }}'])" :key="'c'+_ev">
+                                                                                                            <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                                                                                <span x-text="_ev"></span>
+                                                                                                                <button type="button" @click.stop="const _o=(row['{{ $subName }}']??={}); _o['{{ $nnName }}']=enumToggle(_o['{{ $nnName }}'],_ev)" class="w-3 h-3 flex items-center justify-center rounded-full hover:bg-purple-200"><svg class="w-1.5 h-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                                                                                            </span>
+                                                                                                        </template>
+                                                                                                    </div>
+                                                                                                    <div class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                                                                                                        <template x-for="_eo in _opts" :key="_eo">
+                                                                                                            <div class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors select-none text-xs"
+                                                                                                                 :class="enumArr((row['{{ $subName }}'] ?? {})['{{ $nnName }}']).includes(_eo) ? 'bg-purple-50' : 'bg-white hover:bg-slate-50'"
+                                                                                                                 @click="const _o=(row['{{ $subName }}']??={}); _o['{{ $nnName }}']=enumToggle(_o['{{ $nnName }}'],_eo)">
+                                                                                                                <div class="w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-all" :class="enumArr((row['{{ $subName }}'] ?? {})['{{ $nnName }}']).includes(_eo) ? 'bg-purple-600 border-purple-600' : 'border-slate-300 bg-white'">
+                                                                                                                    <svg x-show="enumArr((row['{{ $subName }}'] ?? {})['{{ $nnName }}']).includes(_eo)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                                                                                </div>
+                                                                                                                <span class="text-slate-700" x-text="_eo"></span>
+                                                                                                            </div>
+                                                                                                        </template>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            @else
+                                                                                                <select x-model="(row['{{ $subName }}'] ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                                    <option value="">— Select —</option>
+                                                                                                    @foreach($_nnOpts3 as $nnOpt)
+                                                                                                        <option value="{{ $nnOpt }}">{{ $nnOpt }}</option>
+                                                                                                    @endforeach
+                                                                                                </select>
+                                                                                            @endif
                                                                                         @elseif($nnField['type'] === 'media')
                                                                                             @php $nnMultiple = !empty($nnField['multiple']); @endphp
                                                                                             @if($nnMultiple)
@@ -904,13 +1078,38 @@
                                                 @elseif(in_array($subField['type'], ['date','datetime','time']))
                                                     <input type="{{ $subField['type'] }}" x-model="d.{{ $subName }}" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
                                                 @elseif($subField['type'] === 'enumeration')
-                                                    <select x-model="d.{{ $subName }}" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
-                                                        <option value="">— Select —</option>
-                                                        @foreach(explode("\n", trim($subField['enumValues'] ?? '')) as $eOpt)
-                                                            @php $eOpt = trim($eOpt); @endphp
-                                                            @if($eOpt)<option value="{{ $eOpt }}">{{ $eOpt }}</option>@endif
-                                                        @endforeach
-                                                    </select>
+                                                    @php $_sfOpts5 = $enumOpts($subField); $_sfMulti5 = !empty($subField['multiple']); @endphp
+                                                    @if($_sfMulti5)
+                                                        <div x-data="{ _opts: {{ json_encode($_sfOpts5) }} }">
+                                                            <div class="flex flex-wrap gap-1 mb-1" x-show="enumArr(d.{{ $subName }}).length > 0">
+                                                                <template x-for="_ev in enumArr(d.{{ $subName }})" :key="'c5'+_ev">
+                                                                    <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                                        <span x-text="_ev"></span>
+                                                                        <button type="button" @click.stop="d.{{ $subName }} = enumToggle(d.{{ $subName }}, _ev)" class="w-3 h-3 flex items-center justify-center rounded-full hover:bg-purple-200"><svg class="w-1.5 h-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                                                    </span>
+                                                                </template>
+                                                            </div>
+                                                            <div class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                                                                <template x-for="_eo in _opts" :key="_eo">
+                                                                    <div class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors select-none text-sm"
+                                                                         :class="enumArr(d.{{ $subName }}).includes(_eo) ? 'bg-purple-50' : 'bg-white hover:bg-slate-50'"
+                                                                         @click="d.{{ $subName }} = enumToggle(d.{{ $subName }}, _eo)">
+                                                                        <div class="w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-all" :class="enumArr(d.{{ $subName }}).includes(_eo) ? 'bg-purple-600 border-purple-600' : 'border-slate-300 bg-white'">
+                                                                            <svg x-show="enumArr(d.{{ $subName }}).includes(_eo)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                                        </div>
+                                                                        <span class="text-slate-700" x-text="_eo"></span>
+                                                                    </div>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                    @else
+                                                        <select x-model="d.{{ $subName }}" class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
+                                                            <option value="">— Select —</option>
+                                                            @foreach($_sfOpts5 as $eOpt)
+                                                                @if($eOpt)<option value="{{ $eOpt }}">{{ $eOpt }}</option>@endif
+                                                            @endforeach
+                                                        </select>
+                                                    @endif
                                                 @elseif($subField['type'] === 'media')
                                                     @php $subIsMultiple = !empty($subField['multiple']); @endphp
                                                     @if($subIsMultiple)
@@ -1057,13 +1256,38 @@
                                                                                                 </div>
                                                                                             </button>
                                                                                         @elseif($nnField['type'] === 'enumeration')
-                                                                                            <select x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
-                                                                                                <option value="">— Select —</option>
-                                                                                                @foreach(explode("\n", trim($nnField['enumValues'] ?? '')) as $nnOpt)
-                                                                                                    @php $nnOpt = trim($nnOpt); @endphp
-                                                                                                    @if($nnOpt)<option value="{{ $nnOpt }}">{{ $nnOpt }}</option>@endif
-                                                                                                @endforeach
-                                                                                            </select>
+                                                                                            @php $_nnOpts2 = $enumOpts($nnField); $_nnMulti2 = !empty($nnField['multiple']); @endphp
+                                                                                            @if($_nnMulti2)
+                                                                                                <div x-data="{ _opts: {{ json_encode($_nnOpts2) }} }">
+                                                                                                    <div class="flex flex-wrap gap-1 mb-1" x-show="enumArr(nr['{{ $nnName }}']).length > 0">
+                                                                                                        <template x-for="_ev in enumArr(nr['{{ $nnName }}'])" :key="'c'+_ev">
+                                                                                                            <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                                                                                <span x-text="_ev"></span>
+                                                                                                                <button type="button" @click.stop="nr['{{ $nnName }}'] = enumToggle(nr['{{ $nnName }}'], _ev)" class="w-3 h-3 flex items-center justify-center rounded-full hover:bg-purple-200"><svg class="w-1.5 h-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                                                                                            </span>
+                                                                                                        </template>
+                                                                                                    </div>
+                                                                                                    <div class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                                                                                                        <template x-for="_eo in _opts" :key="_eo">
+                                                                                                            <div class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors select-none text-xs"
+                                                                                                                 :class="enumArr(nr['{{ $nnName }}']).includes(_eo) ? 'bg-purple-50' : 'bg-white hover:bg-slate-50'"
+                                                                                                                 @click="nr['{{ $nnName }}'] = enumToggle(nr['{{ $nnName }}'], _eo)">
+                                                                                                                <div class="w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-all" :class="enumArr(nr['{{ $nnName }}']).includes(_eo) ? 'bg-purple-600 border-purple-600' : 'border-slate-300 bg-white'">
+                                                                                                                    <svg x-show="enumArr(nr['{{ $nnName }}']).includes(_eo)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                                                                                </div>
+                                                                                                                <span class="text-slate-700" x-text="_eo"></span>
+                                                                                                            </div>
+                                                                                                        </template>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            @else
+                                                                                                <select x-model="nr['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                                    <option value="">— Select —</option>
+                                                                                                    @foreach($_nnOpts2 as $nnOpt)
+                                                                                                        <option value="{{ $nnOpt }}">{{ $nnOpt }}</option>
+                                                                                                    @endforeach
+                                                                                                </select>
+                                                                                            @endif
                                                                                         @elseif($nnField['type'] === 'media')
                                                                                             @php $nnMultiple = !empty($nnField['multiple']); @endphp
                                                                                             @if($nnMultiple)
@@ -1160,13 +1384,38 @@
                                                                                 </div>
                                                                             </button>
                                                                         @elseif($nnField['type'] === 'enumeration')
-                                                                            <select x-model="(d.{{ $subName }} ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
-                                                                                <option value="">— Select —</option>
-                                                                                @foreach(explode("\n", trim($nnField['enumValues'] ?? '')) as $nnOpt)
-                                                                                    @php $nnOpt = trim($nnOpt); @endphp
-                                                                                    @if($nnOpt)<option value="{{ $nnOpt }}">{{ $nnOpt }}</option>@endif
-                                                                                @endforeach
-                                                                            </select>
+                                                                            @php $_nnOpts7 = $enumOpts($nnField); $_nnMulti7 = !empty($nnField['multiple']); @endphp
+                                                                            @if($_nnMulti7)
+                                                                                <div x-data="{ _opts: {{ json_encode($_nnOpts7) }} }">
+                                                                                    <div class="flex flex-wrap gap-1 mb-1" x-show="enumArr((d.{{ $subName }} ?? {})['{{ $nnName }}']).length > 0">
+                                                                                        <template x-for="_ev in enumArr((d.{{ $subName }} ?? {})['{{ $nnName }}'])" :key="'c7'+_ev">
+                                                                                            <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                                                                <span x-text="_ev"></span>
+                                                                                                <button type="button" @click.stop="const _o7=(d.{{ $subName }}??={}); _o7['{{ $nnName }}']=enumToggle(_o7['{{ $nnName }}'],_ev)" class="w-3 h-3 flex items-center justify-center rounded-full hover:bg-purple-200"><svg class="w-1.5 h-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                                                                            </span>
+                                                                                        </template>
+                                                                                    </div>
+                                                                                    <div class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                                                                                        <template x-for="_eo in _opts" :key="_eo">
+                                                                                            <div class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors select-none text-xs"
+                                                                                                 :class="enumArr((d.{{ $subName }} ?? {})['{{ $nnName }}']).includes(_eo) ? 'bg-purple-50' : 'bg-white hover:bg-slate-50'"
+                                                                                                 @click="const _o7=(d.{{ $subName }}??={}); _o7['{{ $nnName }}']=enumToggle(_o7['{{ $nnName }}'],_eo)">
+                                                                                                <div class="w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-all" :class="enumArr((d.{{ $subName }} ?? {})['{{ $nnName }}']).includes(_eo) ? 'bg-purple-600 border-purple-600' : 'border-slate-300 bg-white'">
+                                                                                                    <svg x-show="enumArr((d.{{ $subName }} ?? {})['{{ $nnName }}']).includes(_eo)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                                                                </div>
+                                                                                                <span class="text-slate-700" x-text="_eo"></span>
+                                                                                            </div>
+                                                                                        </template>
+                                                                                    </div>
+                                                                                </div>
+                                                                            @else
+                                                                                <select x-model="(d.{{ $subName }} ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
+                                                                                    <option value="">— Select —</option>
+                                                                                    @foreach($_nnOpts7 as $nnOpt)
+                                                                                        @if($nnOpt)<option value="{{ $nnOpt }}">{{ $nnOpt }}</option>@endif
+                                                                                    @endforeach
+                                                                                </select>
+                                                                            @endif
                                                                         @elseif($nnField['type'] === 'media')
                                                                             @php $nnMultiple = !empty($nnField['multiple']); @endphp
                                                                             @if($nnMultiple)
@@ -1377,16 +1626,39 @@
                                                                        class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
 
                                                             @elseif($subField['type'] === 'enumeration')
-                                                                <select x-model="row['{{ $subName }}']"
-                                                                        class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
-                                                                    <option value="">— Select —</option>
-                                                                    @foreach(explode("\n", trim($subField['enumValues'] ?? '')) as $eOpt)
-                                                                        @php $eOpt = trim($eOpt); @endphp
-                                                                        @if($eOpt)
-                                                                            <option value="{{ $eOpt }}">{{ $eOpt }}</option>
-                                                                        @endif
-                                                                    @endforeach
-                                                                </select>
+                                                                @php $_sfOpts8 = $enumOpts($subField); $_sfMulti8 = !empty($subField['multiple']); @endphp
+                                                                @if($_sfMulti8)
+                                                                    <div x-data="{ _opts: {{ json_encode($_sfOpts8) }} }">
+                                                                        <div class="flex flex-wrap gap-1 mb-1" x-show="enumArr(row['{{ $subName }}']).length > 0">
+                                                                            <template x-for="_ev in enumArr(row['{{ $subName }}'])" :key="'c8'+_ev">
+                                                                                <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                                                    <span x-text="_ev"></span>
+                                                                                    <button type="button" @click.stop="row['{{ $subName }}'] = enumToggle(row['{{ $subName }}'], _ev)" class="w-3 h-3 flex items-center justify-center rounded-full hover:bg-purple-200"><svg class="w-1.5 h-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                                                                </span>
+                                                                            </template>
+                                                                        </div>
+                                                                        <div class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                                                                            <template x-for="_eo in _opts" :key="_eo">
+                                                                                <div class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors select-none text-sm"
+                                                                                     :class="enumArr(row['{{ $subName }}']).includes(_eo) ? 'bg-purple-50' : 'bg-white hover:bg-slate-50'"
+                                                                                     @click="row['{{ $subName }}'] = enumToggle(row['{{ $subName }}'], _eo)">
+                                                                                    <div class="w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-all" :class="enumArr(row['{{ $subName }}']).includes(_eo) ? 'bg-purple-600 border-purple-600' : 'border-slate-300 bg-white'">
+                                                                                        <svg x-show="enumArr(row['{{ $subName }}']).includes(_eo)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                                                    </div>
+                                                                                    <span class="text-slate-700" x-text="_eo"></span>
+                                                                                </div>
+                                                                            </template>
+                                                                        </div>
+                                                                    </div>
+                                                                @else
+                                                                    <select x-model="row['{{ $subName }}']"
+                                                                            class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
+                                                                        <option value="">— Select —</option>
+                                                                        @foreach($_sfOpts8 as $eOpt)
+                                                                            @if($eOpt)<option value="{{ $eOpt }}">{{ $eOpt }}</option>@endif
+                                                                        @endforeach
+                                                                    </select>
+                                                                @endif
 
                                                             @elseif($subField['type'] === 'media')
                                                                 <div x-data="{ _mid: row['{{ $subName }}'] ? parseInt(row['{{ $subName }}']) : null, _mshow: false }"
@@ -1733,5 +2005,41 @@ document.addEventListener('DOMContentLoaded', function () {
         this.value = slugify(this.value);
     });
 })();
+</script>
+
+<script>
+function enumPicker(opts, initialSelected) {
+    return {
+        opts:     opts || [],
+        selected: initialSelected || [],
+        toggle(v) {
+            const i = this.selected.indexOf(v);
+            i === -1 ? this.selected.push(v) : this.selected.splice(i, 1);
+        },
+    };
+}
+
+function enumArr(v)         { return Array.isArray(v) ? v : (v ? [v] : []); }
+function enumToggle(cur, v) { const a = enumArr(cur).slice(); const i = a.indexOf(v); i === -1 ? a.push(v) : a.splice(i, 1); return a; }
+
+function relPicker(initialEntries, initialSelected) {
+    return {
+        entries:  initialEntries  || [],
+        selected: initialSelected || [],
+        search:   '',
+        filtered() {
+            const q = this.search.trim().toLowerCase();
+            return q ? this.entries.filter(e => e.label.toLowerCase().includes(q)) : this.entries;
+        },
+        toggle(id) {
+            const i = this.selected.indexOf(id);
+            i === -1 ? this.selected.push(id) : this.selected.splice(i, 1);
+        },
+        labelFor(id) {
+            const e = this.entries.find(e => e.id === id);
+            return e ? e.label : '#' + id;
+        },
+    };
+}
 </script>
 @endpush
