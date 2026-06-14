@@ -111,7 +111,7 @@
                     <span x-show="!dragging && !uploading">Drag & drop or
                         <label class="cursor-pointer text-blue-600 hover:text-blue-500 pointer-events-auto">
                             click to browse
-                            <input type="file" multiple class="sr-only" @change="uploadFiles($event.target.files)">
+                            <input type="file" multiple class="sr-only" data-no-dirty @change="uploadFiles($event.target.files)">
                         </label>
                     </span>
                     <span x-show="uploading" x-cloak>Uploading… <span x-text="progress + '%'"></span></span>
@@ -221,15 +221,18 @@
 
         {{-- File grid --}}
         @if($media->isEmpty() && count($folders) === 0)
-            <div class="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+            <div x-show="!newFiles.length"
+                 class="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
                 <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
                           d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <p class="text-sm">This folder is empty. Upload something or create a subfolder.</p>
             </div>
-        @elseif($media->isNotEmpty())
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="file-grid">
+        @endif
+        @if($media->isNotEmpty() || true)
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="file-grid"
+                 x-show="{{ $media->isNotEmpty() ? 'true' : 'false' }} || newFiles.length > 0">
                 @foreach($media as $file)
                     <div class="group relative bg-white border border-slate-200 rounded-xl overflow-hidden transition-colors cursor-pointer"
                          :class="selected.includes({{ $file->id }}) ? 'border-blue-500 ring-2 ring-blue-500/40' : 'hover:border-slate-300'"
@@ -243,6 +246,7 @@
                              @click.stop>
                             <input type="checkbox" :checked="selected.includes({{ $file->id }})"
                                    @change="toggleSelect({{ $file->id }})"
+                                   data-no-dirty
                                    class="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 cursor-pointer">
                         </div>
 
@@ -328,6 +332,71 @@
                         </div>
                     </div>
                 @endforeach
+
+                {{-- Newly uploaded files (no page reload) --}}
+                <template x-for="f in newFiles" :key="f.id">
+                    <div class="group relative bg-white border border-slate-200 rounded-xl overflow-hidden transition-colors cursor-pointer"
+                         :class="selected.includes(f.id) ? 'border-blue-500 ring-2 ring-blue-500/40' : 'hover:border-slate-300'"
+                         @click="toggleSelect(f.id)">
+
+                        <div class="absolute top-2 left-2 z-10"
+                             :class="selected.length > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+                             @click.stop>
+                            <input type="checkbox" :checked="selected.includes(f.id)"
+                                   @change="toggleSelect(f.id)"
+                                   class="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 cursor-pointer">
+                        </div>
+
+                        <template x-if="f.status === 'converting'">
+                            <div class="absolute top-2 right-2 z-10 flex items-center gap-1 bg-amber-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                                <svg class="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                </svg>
+                                Converting
+                            </div>
+                        </template>
+
+                        <template x-if="f.isImage">
+                            <div class="aspect-square overflow-hidden" :class="f.status === 'converting' ? 'opacity-60' : ''">
+                                <img :src="f.url" :alt="f.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
+                            </div>
+                        </template>
+                        <template x-if="!f.isImage">
+                            <div class="aspect-square bg-slate-100 flex flex-col items-center justify-center gap-2">
+                                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span class="text-xs font-bold text-slate-400 uppercase" x-text="f.ext"></span>
+                            </div>
+                        </template>
+
+                        <div class="p-2">
+                            <p class="text-xs text-slate-500 truncate" x-text="f.name"></p>
+                            <p class="text-xs text-slate-400" x-text="f.size_human"></p>
+                        </div>
+
+                        <div x-show="selected.length === 0"
+                             class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                             @click.stop>
+                            <a :href="f.url" target="_blank"
+                               class="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center text-white">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                            </a>
+                            <button type="button" @click="deleteFile(f.id, $el)"
+                                    class="w-8 h-8 bg-red-500/70 hover:bg-red-500 rounded-lg flex items-center justify-center text-white">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </template>
             </div>
 
             @if($media->hasPages())
@@ -348,6 +417,13 @@ function mediaLibrary() {
         currentFolder: '{{ $folder }}',
         selected:      [],
         allIds:        @json($media->pluck('id')),
+        newFiles:      [],
+
+        humanSize(b) {
+            if (b >= 1048576) return (b / 1048576).toFixed(2) + ' MB';
+            if (b >= 1024)    return (b / 1024).toFixed(2)    + ' KB';
+            return b + ' B';
+        },
 
         toggleSelect(id) {
             const idx = this.selected.indexOf(id);
@@ -367,22 +443,39 @@ function mediaLibrary() {
             let done    = 0;
 
             for (const file of files) {
-                const form = new FormData();
-                form.append('file', file);
-                form.append('folder', this.currentFolder);
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('folder', this.currentFolder);
 
-                await fetch('{{ route('talos.media.upload') }}', {
+                const r = await fetch('{{ route('talos.media.upload') }}', {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrf },
-                    body: form,
+                    body: fd,
                 });
+                const j = await r.json();
+
+                if (j.data) {
+                    const m = j.data;
+                    if (!this.allIds.includes(m.id)) {
+                        this.newFiles.unshift({
+                            id:        m.id,
+                            name:      m.name,
+                            url:       m.url,
+                            ext:       m.ext || '',
+                            isImage:   (m.mime_type || '').startsWith('image/'),
+                            status:    m.status || 'ready',
+                            size_human: this.humanSize(m.size || 0),
+                        });
+                        this.allIds.unshift(m.id);
+                        if ((m.status || 'ready') === 'converting') this.pollConverting();
+                    }
+                }
 
                 done++;
                 this.progress = Math.round((done / total) * 100);
             }
 
             this.uploading = false;
-            window.location.reload();
         },
 
         async deleteFile(id, card) {
@@ -392,7 +485,13 @@ function mediaLibrary() {
                 method: 'DELETE',
                 headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
             });
-            if (r.ok) card.remove();
+            if (r.ok) {
+                const newIdx = this.newFiles.findIndex(f => f.id === id);
+                if (newIdx !== -1) this.newFiles.splice(newIdx, 1);
+                else card.remove();
+                this.selected = this.selected.filter(s => s !== id);
+                this.allIds   = this.allIds.filter(s => s !== id);
+            }
         },
 
         async bulkDelete() {
@@ -405,7 +504,7 @@ function mediaLibrary() {
                     headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                 })
             ));
-            window.location.reload();
+            talos.markClean(); window.location.reload();
         },
 
         async moveFile(id, folder) {
@@ -419,7 +518,7 @@ function mediaLibrary() {
                 },
                 body: JSON.stringify({ folder }),
             });
-            window.location.reload();
+            talos.markClean(); window.location.reload();
         },
 
         async bulkMove(folder) {
@@ -436,7 +535,7 @@ function mediaLibrary() {
                     body: JSON.stringify({ folder }),
                 })
             ));
-            window.location.reload();
+            talos.markClean(); window.location.reload();
         },
 
         init() {
@@ -444,15 +543,18 @@ function mediaLibrary() {
         },
 
         pollConverting() {
+            if (this._polling) return;
+            this._polling = true;
             const base    = '{{ url(config('talos.admin_prefix', 'talos') . '/media') }}';
-            const maxWait = 5 * 60 * 1000; // stop polling after 5 minutes
             const started = Date.now();
+            const maxWait = 5 * 60 * 1000;
 
-            const interval = setInterval(async () => {
-                const cards = [...document.querySelectorAll('[data-converting-id]')];
+            const tick = async () => {
+                const cards         = [...document.querySelectorAll('[data-converting-id]')];
+                const newConverting = this.newFiles.filter(f => f.status === 'converting');
 
-                if (!cards.length || Date.now() - started > maxWait) {
-                    clearInterval(interval);
+                if ((!cards.length && !newConverting.length) || Date.now() - started > maxWait) {
+                    this._polling = false;
                     return;
                 }
 
@@ -470,7 +572,28 @@ function mediaLibrary() {
                         }
                     } catch {}
                 }));
-            }, 3000);
+
+                await Promise.all(newConverting.map(async f => {
+                    try {
+                        const res  = await fetch(`${base}/${f.id}`, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (data.data?.status === 'ready') {
+                            const idx = this.newFiles.findIndex(n => n.id === f.id);
+                            if (idx !== -1) {
+                                this.newFiles[idx] = {
+                                    ...this.newFiles[idx],
+                                    status: 'ready',
+                                    url: data.data.url || this.newFiles[idx].url,
+                                };
+                            }
+                        }
+                    } catch {}
+                }));
+
+                setTimeout(tick, 3000);
+            };
+
+            setTimeout(tick, 3000);
         },
     };
 }

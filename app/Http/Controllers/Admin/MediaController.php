@@ -110,7 +110,7 @@ class MediaController extends Controller
         $dir     = $this->storageDir($folder);
         $hash    = md5_file($file->getRealPath());
 
-        $existing = TalosMedia::where('hash', $hash)->first();
+        $existing = TalosMedia::where('hash', $hash)->where('folder', $folder ?: null)->first();
         if ($existing) {
             return response()->json(['data' => $existing]);
         }
