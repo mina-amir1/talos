@@ -50,9 +50,14 @@
     $locale      = $locale ?? config('talos.default_locale');
     $locales     = $locales ?? app(\App\Services\LocaleService::class)->all();
     $siblings    = $siblings ?? [];
+    $mediaItems  = $mediaItems ?? collect();
+    $components  = $components ?? [];
 
     // Shared helper: parse enum options from schema string
     $enumOpts = fn($f) => array_values(array_filter(array_map('trim', explode("\n", $f['enumValues'] ?? ''))));
+
+    // Media folders for the picker sidebar
+    $mediaFolders = $mediaItems->pluck('folder')->filter()->unique()->sort()->values();
 
     // Build uid → schema map for component fields
     $componentMap = [];
@@ -414,7 +419,7 @@
                                     <div x-show="show" x-cloak
                                          class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
                                          @keydown.escape.window="show = false">
-                                        <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                        <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                             <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                                                 <h3 class="text-slate-800 font-semibold">
                                                     Media Library
@@ -426,11 +431,11 @@
                                                     </svg>
                                                 </button>
                                             </div>
-                                            <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                            <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                 @foreach($mediaItems as $m)
                                                     <button type="button"
                                                             @click="ids.includes({{ $m->id }}) ? ids = ids.filter(i => i !== {{ $m->id }}) : ids.push({{ $m->id }})"
-                                                            class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500 relative"
+                                                            data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500 relative"
                                                             :class="ids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                         @if($m->isImage())
                                                             <img src="{{ $m->url }}" class="w-full h-36 object-cover">
@@ -447,7 +452,7 @@
                                                     </button>
                                                 @endforeach
                                             </div>
-                                            <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                            </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                 <a href="{{ route('talos.media.index') }}" target="_blank"
                                                    class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                 <div class="flex items-center gap-3">
@@ -486,7 +491,7 @@
                                     <div x-show="show" x-cloak
                                          class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
                                          @keydown.escape.window="show = false">
-                                        <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                        <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                             <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                                                 <h3 class="text-slate-800 font-semibold">Media Library</h3>
                                                 <button type="button" @click="show = false" class="text-slate-400 hover:text-slate-900">
@@ -495,11 +500,11 @@
                                                     </svg>
                                                 </button>
                                             </div>
-                                            <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                            <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                 @foreach($mediaItems as $m)
                                                     <button type="button"
                                                             @click="selectedId = {{ $m->id }}; show = false"
-                                                            class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
+                                                            data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                             :class="selectedId === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                         @if($m->isImage())
                                                             <img src="{{ $m->url }}" class="w-full h-36 object-cover">
@@ -510,7 +515,7 @@
                                                     </button>
                                                 @endforeach
                                             </div>
-                                            <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                            </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                 <a href="{{ route('talos.media.index') }}" target="_blank"
                                                    class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                 <button type="button" @click="selectedId = null; show = false"
@@ -667,17 +672,17 @@
                                                                         </button>
                                                                         <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
                                                                              @keydown.escape.window="_mshow = false">
-                                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                 <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                                                                                     <h3 class="text-slate-800 font-semibold">Media Library</h3>
                                                                                     <button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900">
                                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                                     </button>
                                                                                 </div>
-                                                                                <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                     @foreach($mediaItems as $m)
                                                                                         <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()"
-                                                                                                class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
+                                                                                                data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                                 :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                                             @if($m->isImage())
                                                                                                 <img src="{{ $m->url }}" class="w-full h-36 object-cover">
@@ -688,7 +693,7 @@
                                                                                         </button>
                                                                                     @endforeach
                                                                                 </div>
-                                                                                <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                     <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                     <div class="flex items-center gap-3">
                                                                                         <span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span>
@@ -719,17 +724,17 @@
                                                                         </button>
                                                                         <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
                                                                              @keydown.escape.window="_mshow = false">
-                                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                 <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                                                                                     <h3 class="text-slate-800 font-semibold">Media Library</h3>
                                                                                     <button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900">
                                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                                     </button>
                                                                                 </div>
-                                                                                <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                     @foreach($mediaItems as $m)
                                                                                         <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()"
-                                                                                                class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
+                                                                                                data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                                 :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                             @if($m->isImage())
                                                                                                 <img src="{{ $m->url }}" class="w-full h-36 object-cover">
@@ -740,7 +745,7 @@
                                                                                         </button>
                                                                                     @endforeach
                                                                                 </div>
-                                                                                <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                     <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                     <button @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                                 </div>
@@ -839,17 +844,17 @@
                                                                                                                     <span x-text="_mids.length ? 'Add / change' : 'Select from library'"></span>
                                                                                                                 </button>
                                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
-                                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                                                        <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                                                             @foreach($mediaItems as $m)
-                                                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                                                                                     @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                                 </button>
                                                                                                                             @endforeach
                                                                                                                         </div>
-                                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                                        </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                                                             <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                                                             <div class="flex items-center gap-3"><span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span><button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button><button type="button" @click="_mshow = false" class="text-sm text-blue-600 font-medium">Done</button></div>
                                                                                                                         </div>
@@ -868,17 +873,17 @@
                                                                                                                     <span x-text="_mid ? 'Change' : 'Select from library'"></span>
                                                                                                                 </button>
                                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
-                                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                                                        <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                                                             @foreach($mediaItems as $m)
-                                                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                                                                     @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                                 </button>
                                                                                                                             @endforeach
                                                                                                                         </div>
-                                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                                        </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                                                             <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                                                             <button type="button" @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                                                                         </div>
@@ -968,17 +973,17 @@
                                                                                                     <span x-text="_mids.length ? 'Add / change' : 'Select from library'"></span>
                                                                                                 </button>
                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
-                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                                        <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                                             @foreach($mediaItems as $m)
-                                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                                                                     @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                 </button>
                                                                                                             @endforeach
                                                                                                         </div>
-                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                        </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                                             <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                                             <div class="flex items-center gap-3"><span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span><button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button><button type="button" @click="_mshow = false" class="text-sm text-blue-600 font-medium">Done</button></div>
                                                                                                         </div>
@@ -997,17 +1002,17 @@
                                                                                                     <span x-text="_mid ? 'Change' : 'Select from library'"></span>
                                                                                                 </button>
                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
-                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                                        <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                                             @foreach($mediaItems as $m)
-                                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                                                     @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                 </button>
                                                                                                             @endforeach
                                                                                                         </div>
-                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                        </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                                             <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                                             <button type="button" @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                                                         </div>
@@ -1134,17 +1139,17 @@
                                                         </button>
                                                         <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
                                                              @keydown.escape.window="_mshow = false">
-                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                 <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                                                                     <h3 class="text-slate-800 font-semibold">Media Library</h3>
                                                                     <button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900">
                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                     </button>
                                                                 </div>
-                                                                <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                     @foreach($mediaItems as $m)
                                                                         <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()"
-                                                                                class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
+                                                                                data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                 :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                             @if($m->isImage())
                                                                                 <img src="{{ $m->url }}" class="w-full h-36 object-cover">
@@ -1155,7 +1160,7 @@
                                                                         </button>
                                                                     @endforeach
                                                                 </div>
-                                                                <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                     <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                     <div class="flex items-center gap-3">
                                                                         <span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span>
@@ -1186,17 +1191,17 @@
                                                         </button>
                                                         <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
                                                              @keydown.escape.window="_mshow = false">
-                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                            <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                 <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                                                                     <h3 class="text-slate-800 font-semibold">Media Library</h3>
                                                                     <button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900">
                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                     </button>
                                                                 </div>
-                                                                <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                     @foreach($mediaItems as $m)
                                                                         <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()"
-                                                                                class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
+                                                                                data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                 :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                             @if($m->isImage())
                                                                                 <img src="{{ $m->url }}" class="w-full h-36 object-cover">
@@ -1207,7 +1212,7 @@
                                                                         </button>
                                                                     @endforeach
                                                                 </div>
-                                                                <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                     <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                     <button @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                 </div>
@@ -1305,17 +1310,17 @@
                                                                                                     <span x-text="_mids.length ? 'Add / change' : 'Select from library'"></span>
                                                                                                 </button>
                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
-                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                                        <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                                             @foreach($mediaItems as $m)
-                                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                                                                     @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                 </button>
                                                                                                             @endforeach
                                                                                                         </div>
-                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                        </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                                             <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                                             <div class="flex items-center gap-3"><span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span><button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button><button type="button" @click="_mshow = false" class="text-sm text-blue-600 font-medium">Done</button></div>
                                                                                                         </div>
@@ -1334,17 +1339,17 @@
                                                                                                     <span x-text="_mid ? 'Change' : 'Select from library'"></span>
                                                                                                 </button>
                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
-                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                                        <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                                             @foreach($mediaItems as $m)
-                                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
+                                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                                                     @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                 </button>
                                                                                                             @endforeach
                                                                                                         </div>
-                                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                                        </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                                             <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                                             <button type="button" @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                                                         </div>
@@ -1433,17 +1438,17 @@
                                                                                     <span x-text="_mids.length ? 'Add / change' : 'Select from library'"></span>
                                                                                 </button>
                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
-                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                        <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                             @foreach($mediaItems as $m)
-                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
+                                                                                                <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                                                     @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                 </button>
                                                                                             @endforeach
                                                                                         </div>
-                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                        </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                             <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                             <div class="flex items-center gap-3"><span class="text-sm text-slate-400" x-text="_mids.length + ' selected'"></span><button type="button" @click="_mids = []; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button><button type="button" @click="_mshow = false" class="text-sm text-blue-600 font-medium">Done</button></div>
                                                                                         </div>
@@ -1462,17 +1467,17 @@
                                                                                     <span x-text="_mid ? 'Change' : 'Select from library'"></span>
                                                                                 </button>
                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
-                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                                    <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                                        <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                             @foreach($mediaItems as $m)
-                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
+                                                                                                <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                                     @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                 </button>
                                                                                             @endforeach
                                                                                         </div>
-                                                                                        <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                                        </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                             <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                             <button type="button" @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                                         </div>
@@ -1680,17 +1685,17 @@
                                                                     </button>
                                                                     <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
                                                                          @keydown.escape.window="_mshow = false">
-                                                                        <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                                                                        <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                                                                             <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                                                                                 <h3 class="text-slate-800 font-semibold">Media Library</h3>
                                                                                 <button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900">
                                                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                                 </button>
                                                                             </div>
-                                                                            <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
+                                                                            <div class="flex-1 min-h-0 flex overflow-hidden"><div class="w-48 border-r border-slate-200 flex-shrink-0 overflow-y-auto py-2"><button type="button" @click="$store._mlib.folder = null" :class="$store._mlib.folder === null ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm transition-colors">All media</button>@foreach($mediaFolders as $_mfdr)<button type="button" data-folder="{{ $_mfdr }}" @click="$store._mlib.folder = $el.dataset.folder" :class="$el.dataset.folder === $store._mlib.folder ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'" class="w-full text-left px-4 py-2.5 text-sm truncate transition-colors flex items-center gap-2"><svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span>{{ basename($_mfdr) }}</span></button>@endforeach</div><div class="flex-1 min-h-0 overflow-y-auto"><div class="p-4 grid grid-cols-3 gap-4">
                                                                                 @foreach($mediaItems as $m)
                                                                                     <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()"
-                                                                                            class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
+                                                                                            data-folder="{{ $m->folder ?? '' }}" x-show="$store._mlib.folder===null||$el.dataset.folder===$store._mlib.folder" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                             :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                         @if($m->isImage())
                                                                                             <img src="{{ $m->url }}" class="w-full h-36 object-cover">
@@ -1701,7 +1706,7 @@
                                                                                     </button>
                                                                                 @endforeach
                                                                             </div>
-                                                                            <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
+                                                                            </div></div><div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center">
                                                                                 <a href="{{ route('talos.media.index') }}" target="_blank" class="text-sm text-blue-600 hover:underline">Upload more →</a>
                                                                                 <button @click="_mid = null; _mshow = false; talos.markDirty()" class="text-sm text-slate-400 hover:text-slate-600">Clear</button>
                                                                             </div>
@@ -2008,6 +2013,10 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <script>
+document.addEventListener('alpine:init', () => {
+    Alpine.store('_mlib', { folder: null });
+});
+
 function enumPicker(opts, initialSelected) {
     return {
         opts:     opts || [],
