@@ -225,6 +225,20 @@ class MediaController extends Controller
         return back()->with('success', 'File deleted.');
     }
 
+    public function items()
+    {
+        $items = TalosMedia::latest()->get()->map(fn($m) => [
+            'id'      => $m->id,
+            'name'    => $m->name,
+            'url'     => $m->url,
+            'ext'     => $m->ext,
+            'folder'  => $m->folder,
+            'isImage' => $m->isImage(),
+        ]);
+
+        return response()->json(['data' => $items]);
+    }
+
     public function show(int $id)
     {
         return response()->json(['data' => TalosMedia::findOrFail($id)]);

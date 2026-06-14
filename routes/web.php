@@ -67,6 +67,7 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::post('/folders',       [MediaController::class, 'storeFolder'])->name('folders.store');
             Route::delete('/folders',     [MediaController::class, 'destroyFolder'])->name('folders.destroy');
             Route::put('/{id}/move',      [MediaController::class, 'moveFile'])->name('move');
+            Route::get('/items',          [MediaController::class, 'items'])->name('items');
             Route::get('/{id}',           [MediaController::class, 'show'])->name('show');
             Route::delete('/{id}',        [MediaController::class, 'destroy'])->name('destroy');
         });
