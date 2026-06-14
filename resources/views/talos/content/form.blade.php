@@ -426,16 +426,16 @@
                                                     </svg>
                                                 </button>
                                             </div>
-                                            <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                            <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                 @foreach($mediaItems as $m)
                                                     <button type="button"
                                                             @click="ids.includes({{ $m->id }}) ? ids = ids.filter(i => i !== {{ $m->id }}) : ids.push({{ $m->id }})"
                                                             class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500 relative"
                                                             :class="ids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                         @if($m->isImage())
-                                                            <img src="{{ $m->url }}" class="w-full h-24 object-cover">
+                                                            <img src="{{ $m->url }}" class="w-full h-36 object-cover">
                                                         @else
-                                                            <div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
+                                                            <div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
                                                         @endif
                                                         <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                         <div x-show="ids.includes({{ $m->id }})"
@@ -495,16 +495,16 @@
                                                     </svg>
                                                 </button>
                                             </div>
-                                            <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                            <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                 @foreach($mediaItems as $m)
                                                     <button type="button"
                                                             @click="selectedId = {{ $m->id }}; show = false"
                                                             class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                             :class="selectedId === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                         @if($m->isImage())
-                                                            <img src="{{ $m->url }}" class="w-full h-24 object-cover">
+                                                            <img src="{{ $m->url }}" class="w-full h-36 object-cover">
                                                         @else
-                                                            <div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
+                                                            <div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
                                                         @endif
                                                         <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                     </button>
@@ -674,15 +674,15 @@
                                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                                     </button>
                                                                                 </div>
-                                                                                <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                     @foreach($mediaItems as $m)
                                                                                         <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()"
                                                                                                 class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                                 :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                                             @if($m->isImage())
-                                                                                                <img src="{{ $m->url }}" class="w-full h-24 object-cover">
+                                                                                                <img src="{{ $m->url }}" class="w-full h-36 object-cover">
                                                                                             @else
-                                                                                                <div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
+                                                                                                <div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
                                                                                             @endif
                                                                                             <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                         </button>
@@ -726,15 +726,15 @@
                                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                                     </button>
                                                                                 </div>
-                                                                                <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                     @foreach($mediaItems as $m)
                                                                                         <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()"
                                                                                                 class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                                 :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                             @if($m->isImage())
-                                                                                                <img src="{{ $m->url }}" class="w-full h-24 object-cover">
+                                                                                                <img src="{{ $m->url }}" class="w-full h-36 object-cover">
                                                                                             @else
-                                                                                                <div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
+                                                                                                <div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
                                                                                             @endif
                                                                                             <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                         </button>
@@ -841,10 +841,10 @@
                                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
                                                                                                                     <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                                                             @foreach($mediaItems as $m)
                                                                                                                                 <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
-                                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                                 </button>
                                                                                                                             @endforeach
@@ -870,10 +870,10 @@
                                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
                                                                                                                     <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                                                             @foreach($mediaItems as $m)
                                                                                                                                 <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
-                                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                                 </button>
                                                                                                                             @endforeach
@@ -970,10 +970,10 @@
                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
                                                                                                     <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                                             @foreach($mediaItems as $m)
                                                                                                                 <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
-                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                 </button>
                                                                                                             @endforeach
@@ -999,10 +999,10 @@
                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
                                                                                                     <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                                             @foreach($mediaItems as $m)
                                                                                                                 <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
-                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                 </button>
                                                                                                             @endforeach
@@ -1141,15 +1141,15 @@
                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                     </button>
                                                                 </div>
-                                                                <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                     @foreach($mediaItems as $m)
                                                                         <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()"
                                                                                 class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                 :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
                                                                             @if($m->isImage())
-                                                                                <img src="{{ $m->url }}" class="w-full h-24 object-cover">
+                                                                                <img src="{{ $m->url }}" class="w-full h-36 object-cover">
                                                                             @else
-                                                                                <div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
+                                                                                <div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
                                                                             @endif
                                                                             <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                         </button>
@@ -1193,15 +1193,15 @@
                                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                     </button>
                                                                 </div>
-                                                                <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                     @foreach($mediaItems as $m)
                                                                         <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()"
                                                                                 class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                 :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                             @if($m->isImage())
-                                                                                <img src="{{ $m->url }}" class="w-full h-24 object-cover">
+                                                                                <img src="{{ $m->url }}" class="w-full h-36 object-cover">
                                                                             @else
-                                                                                <div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
+                                                                                <div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
                                                                             @endif
                                                                             <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                         </button>
@@ -1307,10 +1307,10 @@
                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
                                                                                                     <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                                             @foreach($mediaItems as $m)
                                                                                                                 <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
-                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                 </button>
                                                                                                             @endforeach
@@ -1336,10 +1336,10 @@
                                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
                                                                                                     <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                                             @foreach($mediaItems as $m)
                                                                                                                 <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
-                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                                 </button>
                                                                                                             @endforeach
@@ -1435,10 +1435,10 @@
                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
                                                                                     <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                             @foreach($mediaItems as $m)
                                                                                                 <button type="button" @click="_mids.includes({{ $m->id }}) ? _mids = _mids.filter(id => id !== {{ $m->id }}) : _mids.push({{ $m->id }}); talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mids.includes({{ $m->id }}) ? 'border-blue-500' : 'border-transparent'">
-                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                 </button>
                                                                                             @endforeach
@@ -1464,10 +1464,10 @@
                                                                                 <div x-show="_mshow" x-cloak class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" @keydown.escape.window="_mshow = false">
                                                                                     <div class="bg-white border border-slate-200 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                                                                                         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200"><h3 class="text-slate-800 font-semibold">Media Library</h3><button type="button" @click="_mshow = false" class="text-slate-400 hover:text-slate-900"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-                                                                                        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                                        <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                             @foreach($mediaItems as $m)
                                                                                                 <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()" class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500" :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
-                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-24 object-cover">@else<div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
+                                                                                                    @if($m->isImage())<img src="{{ $m->url }}" class="w-full h-36 object-cover">@else<div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>@endif
                                                                                                     <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                                 </button>
                                                                                             @endforeach
@@ -1687,15 +1687,15 @@
                                                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                                 </button>
                                                                             </div>
-                                                                            <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-3">
+                                                                            <div class="flex-1 min-h-0 overflow-y-auto p-4 grid grid-cols-3 gap-4 content-start">
                                                                                 @foreach($mediaItems as $m)
                                                                                     <button type="button" @click="_mid = {{ $m->id }}; _mshow = false; talos.markDirty()"
                                                                                             class="rounded-lg overflow-hidden border-2 transition-colors hover:border-blue-500"
                                                                                             :class="_mid === {{ $m->id }} ? 'border-blue-500' : 'border-transparent'">
                                                                                         @if($m->isImage())
-                                                                                            <img src="{{ $m->url }}" class="w-full h-24 object-cover">
+                                                                                            <img src="{{ $m->url }}" class="w-full h-36 object-cover">
                                                                                         @else
-                                                                                            <div class="w-full h-24 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
+                                                                                            <div class="w-full h-36 bg-slate-100 flex items-center justify-center text-slate-500 text-xs">{{ $m->ext }}</div>
                                                                                         @endif
                                                                                         <p class="text-xs text-slate-500 p-1 truncate">{{ $m->name }}</p>
                                                                                     </button>
