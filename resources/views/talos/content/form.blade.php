@@ -131,7 +131,6 @@
             </div>
             @endif
 
-            <div id="fields-container" class="flex flex-col gap-5">
             @foreach($attributes as $name => $field)
                 @php
                     $value    = $isEdit ? ($entry->$name ?? null) : old($name, $field['default'] ?? null);
@@ -143,20 +142,12 @@
                     @continue
                 @endif
 
-                <div class="bg-white border border-slate-200 rounded-xl p-5" data-field="{{ $name }}">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="field-drag-handle cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 flex-shrink-0 transition-colors" title="Drag to reorder">
-                            <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                                <circle cx="5" cy="4" r="1.5"/><circle cx="5" cy="8" r="1.5"/><circle cx="5" cy="12" r="1.5"/>
-                                <circle cx="11" cy="4" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="11" cy="12" r="1.5"/>
-                            </svg>
-                        </div>
-                        <label class="text-sm font-medium text-slate-600 flex-1">
-                            {{ $label }}
-                            @if($required)<span class="text-red-600 ml-0.5">*</span>@endif
-                            <span class="text-slate-400 text-xs font-normal ml-1">({{ $field['type'] }})</span>
-                        </label>
-                    </div>
+                <div class="bg-white border border-slate-200 rounded-xl p-5">
+                    <label class="block text-sm font-medium text-slate-600 mb-3">
+                        {{ $label }}
+                        @if($required)<span class="text-red-600 ml-0.5">*</span>@endif
+                        <span class="text-slate-400 text-xs font-normal ml-1">({{ $field['type'] }})</span>
+                    </label>
 
                     @switch($field['type'])
 
@@ -1746,7 +1737,6 @@
                     @endswitch
                 </div>
             @endforeach
-            </div>{{-- #fields-container --}}
         </div>
     </form>
     {{-- ── End of main form ── --}}
@@ -1858,7 +1848,6 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script>
 // ── Repeater Alpine component (Strapi-style) ──────────────────────────────
@@ -2109,32 +2098,4 @@ function relPicker(initialEntries, initialSelected) {
 }
 </script>
 
-<script>
-// ── Field section drag-to-reorder ─────────────────────────────────────────────
-(function () {
-    const container = document.getElementById('fields-container');
-    if (!container || typeof Sortable === 'undefined') return;
-
-    function currentOrder() {
-        return [...container.querySelectorAll(':scope > [data-field]')].map(c => c.dataset.field);
-    }
-
-    function saveOrder() {
-        fetch('{{ route('talos.content.field-order', ['uid' => $uid]) }}', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '' },
-            body:    JSON.stringify({ order: currentOrder() }),
-        });
-    }
-
-    let _dirtyBeforeDrag = false;
-
-    Sortable.create(container, {
-        handle:    '.field-drag-handle',
-        animation: 150,
-        onStart()  { _dirtyBeforeDrag = talos.isDirty(); },
-        onEnd()    { saveOrder(); if (!_dirtyBeforeDrag) talos.markClean(); },
-    });
-})();
-</script>
 @endpush

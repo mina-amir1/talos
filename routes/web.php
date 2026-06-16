@@ -58,7 +58,6 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::post('/{uid}/{id}/publish',   [ContentManagerController::class, 'publish'])->name('publish');
             Route::post('/{uid}/{id}/unpublish', [ContentManagerController::class, 'unpublish'])->name('unpublish');
             Route::post('/{uid}/{id}/translate', [ContentManagerController::class, 'translate'])->name('translate');
-            Route::post('/{uid}/field-order',    [ContentManagerController::class, 'saveFieldOrder'])->name('field-order');
         });
 
         // Media Library

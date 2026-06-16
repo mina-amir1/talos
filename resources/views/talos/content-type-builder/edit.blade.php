@@ -155,10 +155,17 @@ foreach(($components ?? []) as $cat => $comps) {
         </template>
 
         {{-- Field rows --}}
-        <template x-if="fields.length > 0">
-            <div>
+        <div x-show="fields.length > 0">
+            <div x-ref="fieldsList">
                 <template x-for="(field, index) in fields" :key="field.name">
-                    <div class="group flex items-center gap-4 px-6 py-3.5 border-b border-slate-200/60 hover:bg-white/[0.02] transition-colors">
+                    <div class="group flex items-center gap-4 px-6 py-3.5 border-b border-slate-200/60 hover:bg-slate-50/50 transition-colors">
+
+                        <div class="field-drag-handle cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 flex-shrink-0 transition-colors" title="Drag to reorder">
+                            <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="5" cy="4" r="1.5"/><circle cx="5" cy="8" r="1.5"/><circle cx="5" cy="12" r="1.5"/>
+                                <circle cx="11" cy="4" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="11" cy="12" r="1.5"/>
+                            </svg>
+                        </div>
 
                         <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-mono font-bold"
                              :class="typeStyle(field.type).bg + ' ' + typeStyle(field.type).text">
@@ -199,18 +206,18 @@ foreach(($components ?? []) as $cat => $comps) {
                         </div>
                     </div>
                 </template>
-
-                <button @click="openPicker()"
-                        class="w-full flex items-center gap-3 px-6 py-4 text-slate-400 hover:text-blue-600 hover:bg-white/[0.02] transition-colors text-sm group">
-                    <div class="w-8 h-8 rounded-xl border-2 border-dashed border-slate-300 group-hover:border-blue-500/50 flex items-center justify-center transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                    </div>
-                    Add another field
-                </button>
             </div>
-        </template>
+
+            <button @click="openPicker()"
+                    class="w-full flex items-center gap-3 px-6 py-4 text-slate-400 hover:text-blue-600 hover:bg-white/[0.02] transition-colors text-sm group">
+                <div class="w-8 h-8 rounded-xl border-2 border-dashed border-slate-300 group-hover:border-blue-500/50 flex items-center justify-center transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </div>
+                Add another field
+            </button>
+        </div>
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════════
@@ -1262,6 +1269,22 @@ function fieldBuilder(initialAttributes, uid, initialComponents) {
     return {
         // ── Main modal state ───────────────────────────────────────────
         fields:            toArray(initialAttributes),
+
+        init() {
+            this.$nextTick(() => {
+                if (typeof Sortable === 'undefined' || !this.$refs.fieldsList) return;
+                Sortable.create(this.$refs.fieldsList, {
+                    handle:    '.field-drag-handle',
+                    animation: 150,
+                    onEnd: (evt) => {
+                        if (evt.oldIndex === evt.newIndex) return;
+                        const moved = this.fields.splice(evt.oldIndex, 1)[0];
+                        this.fields.splice(evt.newIndex, 0, moved);
+                        talos.markDirty();
+                    },
+                });
+            });
+        },
         modal:             null,
         editingField:      null,
         editingIndex:      null,
@@ -1562,4 +1585,5 @@ function fieldBuilder(initialAttributes, uid, initialComponents) {
     };
 }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 @endsection
