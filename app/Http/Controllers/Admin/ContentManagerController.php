@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TalosMedia;
+use App\Models\TalosSettings;
 use App\Services\ContentTypeService;
 use App\Services\DynamicModelService;
 use App\Services\LocaleService;
@@ -65,6 +66,8 @@ class ContentManagerController extends Controller
         if (! $contentType) {
             abort(404);
         }
+
+        $contentType = $this->applyFieldOrder($uid, $contentType);
 
         $i18n    = (bool) ($contentType['options']['i18n'] ?? false);
         $locales = app(LocaleService::class)->all();
@@ -169,6 +172,7 @@ class ContentManagerController extends Controller
                 ->toArray();
         }
 
+        $contentType     = $this->applyFieldOrder($uid, $contentType);
         $components      = app(\App\Services\ComponentService::class)->all();
         $mediaItems      = TalosMedia::latest()->get();
         $relationOptions = $this->loadRelationOptions($contentType['attributes'] ?? []);
@@ -307,6 +311,38 @@ class ContentManagerController extends Controller
         return redirect()
             ->route('talos.content.edit', ['uid' => $uid, 'id' => $entry->id])
             ->with('success', 'Translation created for locale "' . $newLocale . '". Update the content below.');
+    }
+
+    public function saveFieldOrder(Request $request, string $uid): \Illuminate\Http\JsonResponse
+    {
+        $request->validate(['order' => 'required|array']);
+        TalosSettings::set('ui.field_order.' . $uid, json_encode($request->input('order')));
+        return response()->json(['ok' => true]);
+    }
+
+    private function applyFieldOrder(string $uid, array $contentType): array
+    {
+        $saved = json_decode(TalosSettings::get('ui.field_order.' . $uid, ''), true);
+        if (empty($saved) || ! is_array($saved)) {
+            return $contentType;
+        }
+
+        $attrs   = $contentType['attributes'];
+        $ordered = [];
+
+        foreach ($saved as $key) {
+            if (isset($attrs[$key])) {
+                $ordered[$key] = $attrs[$key];
+            }
+        }
+        foreach ($attrs as $key => $val) {
+            if (! isset($ordered[$key])) {
+                $ordered[$key] = $val;
+            }
+        }
+
+        $contentType['attributes'] = $ordered;
+        return $contentType;
     }
 
     private function processFormData(Request $request, array $attributes): array
