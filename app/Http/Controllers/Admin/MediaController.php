@@ -160,6 +160,10 @@ class MediaController extends Controller
 
         $this->disk()->makeDirectory($this->storageDir($newPath));
 
+        if ($request->wantsJson()) {
+            return response()->json(['path' => $newPath, 'name' => $name]);
+        }
+
         return redirect()
             ->route('talos.media.index', array_filter(['path' => $parent]))
             ->with('success', 'Folder "' . $name . '" created.');
@@ -236,7 +240,25 @@ class MediaController extends Controller
             'isImage' => $m->isImage(),
         ]);
 
-        return response()->json(['data' => $items]);
+        try {
+            $diskDirs = array_map(
+                fn($d) => trim(Str::after($d, $this->baseDir() . '/'), '/'),
+                $this->disk()->allDirectories($this->baseDir())
+            );
+        } catch (\Throwable) {
+            $diskDirs = [];
+        }
+
+        $dbDirs = TalosMedia::whereNotNull('folder')->distinct()->pluck('folder')->all();
+
+        $folders = collect(array_merge($diskDirs, $dbDirs))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return response()->json(['data' => $items, 'folders' => $folders]);
     }
 
     public function show(int $id)
