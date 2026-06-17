@@ -333,17 +333,6 @@
         {{-- Content --}}
         <main class="flex-1 overflow-y-auto p-6 bg-slate-50" id="talos-main">
 
-            {{-- Flash: success --}}
-            @if(session('success'))
-                <div class="mb-5 flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium bg-emerald-50 border border-emerald-200 text-emerald-700"
-                     x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    {{ session('success') }}
-                </div>
-            @endif
-
             {{-- Flash: errors --}}
             @if($errors->any())
                 <div class="mb-5 flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm bg-red-50 border border-red-200 text-red-700">
@@ -516,6 +505,10 @@ window.talos = (() => {
 
     return { toast, confirm, markDirty, markClean, isDirty };
 })();
+
+@if(session('success'))
+talos.toast('{{ session('success') }}', 'success');
+@endif
 </script>
 </body>
 </html>

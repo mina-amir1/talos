@@ -2102,18 +2102,19 @@ function relPicker(initialEntries, initialSelected) {
 <script>
 (function () {
     const KEY  = 'talos_scroll_{{ $uid }}_{{ $entry->id }}';
+    const main = document.getElementById('talos-main');
     const form = document.getElementById('content-form');
 
-    // Save scroll position just before the form submits
-    if (form) {
-        form.addEventListener('submit', () => sessionStorage.setItem(KEY, window.scrollY));
+    if (form && main) {
+        form.addEventListener('submit', () => sessionStorage.setItem(KEY, main.scrollTop));
     }
 
-    // Restore scroll position after redirect lands back on the edit page
     const saved = sessionStorage.getItem(KEY);
-    if (saved !== null) {
+    if (saved !== null && main) {
         sessionStorage.removeItem(KEY);
-        requestAnimationFrame(() => window.scrollTo({ top: parseInt(saved, 10), behavior: 'instant' }));
+        document.addEventListener('DOMContentLoaded', () => {
+            main.scrollTop = parseInt(saved, 10);
+        });
     }
 })();
 </script>
