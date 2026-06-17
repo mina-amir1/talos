@@ -44,8 +44,6 @@
     .ql-editor ol > li, .ql-editor ul > li { list-style-type: none; padding-left: 1.5em; }
     .ql-editor ul > li::before { content: '\2022'; }
     .ql-editor ol li:not(.ql-direction-rtl), .ql-editor ul li:not(.ql-direction-rtl) { padding-left: 1.5em; }
-    /* Ensure editor is always interactive */
-    .ql-editor { pointer-events: auto; user-select: text; -webkit-user-select: text; }
 </style>
 @endpush
 
@@ -746,13 +744,13 @@
                                                                     </div>
                                                                     @endif
                                                                 @elseif($subField['type'] === 'richtext')
-                                                                    <div x-data="{ _ql: null }" x-effect="
+                                                                    <div x-effect="
                                                                         if(isOpen(idx) && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                         const _qel = $el.querySelector('[data-q]');
-                                                                        _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
+                                                                        const ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                                         const _iv = row['{{ $subName }}'];
-                                                                        if (_iv) _ql.clipboard.dangerouslyPasteHTML(_iv);
-                                                                        _ql.on('text-change', () => { const _h = _ql.root.innerHTML; row['{{ $subName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
+                                                                        if (_iv) { ql.clipboard.dangerouslyPasteHTML(_iv); ql.history.clear(); }
+                                                                        ql.on('text-change', () => { const _h = ql.root.innerHTML; row['{{ $subName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
                                                                         }); }
                                                                     "><div data-q></div></div>
                                                                 @elseif($subField['type'] === 'component')
@@ -900,13 +898,13 @@
                                                                                                             </div>
                                                                                                             @endif
                                                                                                         @elseif($nnField['type'] === 'richtext')
-                                                                                                            <div x-data="{ _ql: null }" x-effect="
+                                                                                                            <div x-effect="
                                                                                                                 if(nestedOpen[ni] && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                                                                 const _qel = $el.querySelector('[data-q]');
-                                                                                                                _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
+                                                                                                                const ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                                                                                 const _iv = nr['{{ $nnName }}'];
-                                                                                                                if (_iv) _ql.clipboard.dangerouslyPasteHTML(_iv);
-                                                                                                                _ql.on('text-change', () => { const _h = _ql.root.innerHTML; nr['{{ $nnName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
+                                                                                                                if (_iv) { ql.clipboard.dangerouslyPasteHTML(_iv); ql.history.clear(); }
+                                                                                                                ql.on('text-change', () => { const _h = ql.root.innerHTML; nr['{{ $nnName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
                                                                                                                 }); }
                                                                                                             "><div data-q></div></div>
                                                                                                         @else
@@ -1045,13 +1043,13 @@
                                                                                             </div>
                                                                                             @endif
                                                                                         @elseif($nnField['type'] === 'richtext')
-                                                                                            <div x-data="{ _ql: null }" x-effect="
+                                                                                            <div x-effect="
                                                                                                 if(isOpen(idx) && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                                                 const _qel = $el.querySelector('[data-q]');
-                                                                                                _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something\u2026' });
+                                                                                                const ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something\u2026' });
                                                                                                 const _iv = (row['{{ $subName }}'] ?? {})['{{ $nnName }}'];
-                                                                                                if (_iv) _ql.clipboard.dangerouslyPasteHTML(_iv);
-                                                                                                _ql.on('text-change', () => { const _h = _ql.root.innerHTML; const _o = (row['{{ $subName }}'] ??= {}); _o['{{ $nnName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
+                                                                                                if (_iv) { ql.clipboard.dangerouslyPasteHTML(_iv); ql.history.clear(); }
+                                                                                                ql.on('text-change', () => { const _h = ql.root.innerHTML; const _o = (row['{{ $subName }}'] ??= {}); _o['{{ $nnName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
                                                                                                 }); }
                                                                                             "><div data-q></div></div>
                                                                                         @else
@@ -1245,12 +1243,12 @@
                                                     </div>
                                                     @endif
                                                 @elseif($subField['type'] === 'richtext')
-                                                    <div x-data="{ _ql: null }" x-init="
+                                                    <div x-init="
                                                         const _qel = $el.querySelector('[data-q]');
-                                                        _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
+                                                        const ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                         const _iv = d['{{ $subName }}'];
-                                                        if (_iv) _ql.clipboard.dangerouslyPasteHTML(_iv);
-                                                        _ql.on('text-change', () => { const _h = _ql.root.innerHTML; d['{{ $subName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
+                                                        if (_iv) { ql.clipboard.dangerouslyPasteHTML(_iv); ql.history.clear(); }
+                                                        ql.on('text-change', () => { const _h = ql.root.innerHTML; d['{{ $subName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
                                                     "><div data-q></div></div>
                                                 @elseif($subField['type'] === 'component')
                                                     @php
@@ -1396,13 +1394,13 @@
                                                                                             </div>
                                                                                             @endif
                                                                                         @elseif($nnField['type'] === 'richtext')
-                                                                                            <div x-data="{ _ql: null }" x-effect="
+                                                                                            <div x-effect="
                                                                                                 if(nestedOpen[ni] && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                                                 const _qel = $el.querySelector('[data-q]');
-                                                                                                _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
+                                                                                                const ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                                                                 const _iv = nr['{{ $nnName }}'];
-                                                                                                if (_iv) _ql.clipboard.dangerouslyPasteHTML(_iv);
-                                                                                                _ql.on('text-change', () => { const _h = _ql.root.innerHTML; nr['{{ $nnName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
+                                                                                                if (_iv) { ql.clipboard.dangerouslyPasteHTML(_iv); ql.history.clear(); }
+                                                                                                ql.on('text-change', () => { const _h = ql.root.innerHTML; nr['{{ $nnName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
                                                                                                 }); }
                                                                                             "><div data-q></div></div>
                                                                                         @else
@@ -1537,12 +1535,12 @@
                                                                             </div>
                                                                             @endif
                                                                                         @elseif($nnField['type'] === 'richtext')
-                                                                                            <div x-data="{ _ql: null }" x-init="
+                                                                                            <div x-init="
                                                                                                 const _qel = $el.querySelector('[data-q]');
-                                                                                                _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
+                                                                                                const ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                                                                 const _iv = (d['{{ $subName }}'] ?? {})['{{ $nnName }}'];
-                                                                                                if (_iv) _ql.clipboard.dangerouslyPasteHTML(_iv);
-                                                                                                _ql.on('text-change', () => { const _h = _ql.root.innerHTML; const _o = (d['{{ $subName }}'] ??= {}); _o['{{ $nnName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
+                                                                                                if (_iv) { ql.clipboard.dangerouslyPasteHTML(_iv); ql.history.clear(); }
+                                                                                                ql.on('text-change', () => { const _h = ql.root.innerHTML; const _o = (d['{{ $subName }}'] ??= {}); _o['{{ $nnName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
                                                                                             "><div data-q></div></div>
                                                                         @else
                                                                             <input type="text" x-model="(d.{{ $subName }} ??= {})['{{ $nnName }}']" class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
@@ -1769,13 +1767,13 @@
                                                                 </div>
 
                                                             @elseif($subField['type'] === 'richtext')
-                                                                <div x-data="{ _ql: null }" x-effect="
+                                                                <div x-effect="
                                                                     if(isOpen(idx) && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                     const _qel = $el.querySelector('[data-q]');
-                                                                    _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
+                                                                    const ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                                     const _iv = row['{{ $subName }}'];
-                                                                    if (_iv) _ql.clipboard.dangerouslyPasteHTML(_iv);
-                                                                    _ql.on('text-change', () => { const _h = _ql.root.innerHTML; row['{{ $subName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
+                                                                    if (_iv) { ql.clipboard.dangerouslyPasteHTML(_iv); ql.history.clear(); }
+                                                                    ql.on('text-change', () => { const _h = ql.root.innerHTML; row['{{ $subName }}'] = _h === '<p><br></p>' ? '' : _h; talos.markDirty(); });
                                                                     }); }
                                                                 "><div data-q></div></div>
                                                             @else
@@ -2009,6 +2007,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Seed existing content
         if (hiddenInput && hiddenInput.value) {
             quill.clipboard.dangerouslyPasteHTML(hiddenInput.value);
+            quill.history.clear();
         }
 
         // Keep hidden input in sync
