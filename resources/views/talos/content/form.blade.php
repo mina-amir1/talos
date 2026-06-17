@@ -39,6 +39,13 @@
     .ql-editor code, .ql-editor pre { background: #f1f5f9; color: #2563eb; }
     .ql-snow .ql-tooltip { background: #ffffff; border-color: #e2e8f0; color: #1e293b; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
     .ql-snow .ql-tooltip input[type=text] { background: #f8fafc; border-color: #e2e8f0; color: #1e293b; }
+    /* Restore list styles overridden by Tailwind preflight */
+    .ql-editor ol, .ql-editor ul { padding-left: 1.5em !important; margin: 0; }
+    .ql-editor ol > li, .ql-editor ul > li { list-style-type: none; padding-left: 1.5em; }
+    .ql-editor ul > li::before { content: '\2022'; }
+    .ql-editor ol li:not(.ql-direction-rtl), .ql-editor ul li:not(.ql-direction-rtl) { padding-left: 1.5em; }
+    /* Ensure editor is always interactive */
+    .ql-editor { pointer-events: auto; user-select: text; -webkit-user-select: text; }
 </style>
 @endpush
 
@@ -740,7 +747,7 @@
                                                                     @endif
                                                                 @elseif($subField['type'] === 'richtext')
                                                                     <div x-data="{ _ql: null }" x-effect="
-                                                                        if(isOpen(idx) && !_ql) { _ql = true; $nextTick(() => {
+                                                                        if(isOpen(idx) && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                         const _qel = $el.querySelector('[data-q]');
                                                                         _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                                         const _iv = row['{{ $subName }}'];
@@ -894,7 +901,7 @@
                                                                                                             @endif
                                                                                                         @elseif($nnField['type'] === 'richtext')
                                                                                                             <div x-data="{ _ql: null }" x-effect="
-                                                                                                                if(nestedOpen[ni] && !_ql) { _ql = true; $nextTick(() => {
+                                                                                                                if(nestedOpen[ni] && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                                                                 const _qel = $el.querySelector('[data-q]');
                                                                                                                 _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                                                                                 const _iv = nr['{{ $nnName }}'];
@@ -1039,7 +1046,7 @@
                                                                                             @endif
                                                                                         @elseif($nnField['type'] === 'richtext')
                                                                                             <div x-data="{ _ql: null }" x-effect="
-                                                                                                if(isOpen(idx) && !_ql) { _ql = true; $nextTick(() => {
+                                                                                                if(isOpen(idx) && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                                                 const _qel = $el.querySelector('[data-q]');
                                                                                                 _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something\u2026' });
                                                                                                 const _iv = (row['{{ $subName }}'] ?? {})['{{ $nnName }}'];
@@ -1390,7 +1397,7 @@
                                                                                             @endif
                                                                                         @elseif($nnField['type'] === 'richtext')
                                                                                             <div x-data="{ _ql: null }" x-effect="
-                                                                                                if(nestedOpen[ni] && !_ql) { _ql = true; $nextTick(() => {
+                                                                                                if(nestedOpen[ni] && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                                                 const _qel = $el.querySelector('[data-q]');
                                                                                                 _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                                                                 const _iv = nr['{{ $nnName }}'];
@@ -1763,7 +1770,7 @@
 
                                                             @elseif($subField['type'] === 'richtext')
                                                                 <div x-data="{ _ql: null }" x-effect="
-                                                                    if(isOpen(idx) && !_ql) { _ql = true; $nextTick(() => {
+                                                                    if(isOpen(idx) && !$el.dataset.qlInit) { $el.dataset.qlInit='1'; requestAnimationFrame(() => {
                                                                     const _qel = $el.querySelector('[data-q]');
                                                                     _ql = new Quill(_qel, { theme: 'snow', modules: { toolbar: window._talosQuillToolbar }, placeholder: 'Write something…' });
                                                                     const _iv = row['{{ $subName }}'];
