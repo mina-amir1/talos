@@ -652,7 +652,7 @@
                                                                     @php $subIsMultiple = !empty($subField['multiple']); @endphp
                                                                     @if($subIsMultiple)
                                                                     <div x-data="{ _mids: (() => { try { const v = row['{{ $subName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
-                                                                         x-init="$watch('_mids', v => row['{{ $subName }}'] = v)">
+                                                                         x-init="$watch('_mids', v => row['{{ $subName }}'] = v); $watch(() => row['{{ $subName }}'], v => { try { const nv = Array.isArray(v) ? v : (v ? JSON.parse(v) : []); if (JSON.stringify(_mids) !== JSON.stringify(nv)) _mids = nv; } catch(e) {} })">
                                                                         <div x-show="_mids.length > 0" class="flex flex-wrap gap-2 mb-2">
                                                                             <template x-for="_mi in $store._mlib.items.filter(i => _mids.includes(i.id))" :key="_mi.id">
                                                                                 <div class="relative group">
@@ -701,7 +701,7 @@
                                                                     </div>
                                                                     @else
                                                                     <div x-data="{ _mid: row['{{ $subName }}'] ? parseInt(row['{{ $subName }}']) : null, _mshow: false }"
-                                                                         x-init="$watch('_mid', v => row['{{ $subName }}'] = v)">
+                                                                         x-init="$watch('_mid', v => row['{{ $subName }}'] = v); $watch(() => row['{{ $subName }}'], v => { const nv = v ? parseInt(v) : null; if (_mid !== nv) _mid = nv; })">
                                                                         <div x-show="_mid" class="mb-2">
                                                                             <template x-for="_mi in $store._mlib.items.filter(i => i.id === _mid)" :key="_mi.id">
                                                                                 <div>
@@ -831,7 +831,7 @@
                                                                                                             @php $nnMultiple = !empty($nnField['multiple']); @endphp
                                                                                                             @if($nnMultiple)
                                                                                                             <div x-data="{ _mids: (() => { try { const v = nr['{{ $nnName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
-                                                                                                                 x-init="$watch('_mids', v => nr['{{ $nnName }}'] = v)">
+                                                                                                                 x-init="$watch('_mids', v => nr['{{ $nnName }}'] = v); $watch(() => nr['{{ $nnName }}'], v => { try { const nv = Array.isArray(v) ? v : (v ? JSON.parse(v) : []); if (JSON.stringify(_mids) !== JSON.stringify(nv)) _mids = nv; } catch(e) {} })">
                                                                                                                 <div x-show="_mids.length > 0" class="flex flex-wrap gap-1.5 mb-2">
                                                                                                                     <template x-for="_mi in $store._mlib.items.filter(i => _mids.includes(i.id))" :key="_mi.id">
                                                                                                                         <div class="relative group">
@@ -865,7 +865,7 @@
                                                                                                             </div>
                                                                                                             @else
                                                                                                             <div x-data="{ _mid: nr['{{ $nnName }}'] ? parseInt(nr['{{ $nnName }}']) : null, _mshow: false }"
-                                                                                                                 x-init="$watch('_mid', v => nr['{{ $nnName }}'] = v)">
+                                                                                                                 x-init="$watch('_mid', v => nr['{{ $nnName }}'] = v); $watch(() => nr['{{ $nnName }}'], v => { const nv = v ? parseInt(v) : null; if (_mid !== nv) _mid = nv; })">
                                                                                                                 <div x-show="_mid" class="mb-2">
                                                                                                                     <template x-for="_mi in $store._mlib.items.filter(i => i.id === _mid)" :key="_mi.id">
                                                                                                                         <div>
@@ -976,7 +976,7 @@
                                                                                             @php $nnMultiple = !empty($nnField['multiple']); @endphp
                                                                                             @if($nnMultiple)
                                                                                             <div x-data="{ _mids: (() => { try { const v = (row['{{ $subName }}'] ?? {})['{{ $nnName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
-                                                                                                 x-init="$watch('_mids', v => (row['{{ $subName }}'] ??= {})['{{ $nnName }}'] = v)">
+                                                                                                 x-init="$watch('_mids', v => (row['{{ $subName }}'] ??= {})['{{ $nnName }}'] = v); $watch(() => (row['{{ $subName }}'] ?? {})['{{ $nnName }}'], v => { try { const nv = Array.isArray(v) ? v : (v ? JSON.parse(v) : []); if (JSON.stringify(_mids) !== JSON.stringify(nv)) _mids = nv; } catch(e) {} })">
                                                                                                 <div x-show="_mids.length > 0" class="flex flex-wrap gap-1.5 mb-2">
                                                                                                     <template x-for="_mi in $store._mlib.items.filter(i => _mids.includes(i.id))" :key="_mi.id">
                                                                                                         <div class="relative group">
@@ -1010,7 +1010,7 @@
                                                                                             </div>
                                                                                             @else
                                                                                             <div x-data="{ _mid: (row['{{ $subName }}'] ?? {})['{{ $nnName }}'] ? parseInt((row['{{ $subName }}'] ?? {})['{{ $nnName }}']) : null, _mshow: false }"
-                                                                                                 x-init="$watch('_mid', v => (row['{{ $subName }}'] ??= {})['{{ $nnName }}'] = v)">
+                                                                                                 x-init="$watch('_mid', v => (row['{{ $subName }}'] ??= {})['{{ $nnName }}'] = v); $watch(() => (row['{{ $subName }}'] ?? {})['{{ $nnName }}'], v => { const nv = v ? parseInt(v) : null; if (_mid !== nv) _mid = nv; })">
                                                                                                 <div x-show="_mid" class="mb-2">
                                                                                                     <template x-for="_mi in $store._mlib.items.filter(i => i.id === _mid)" :key="_mi.id">
                                                                                                         <div>
@@ -1327,7 +1327,7 @@
                                                                                             @php $nnMultiple = !empty($nnField['multiple']); @endphp
                                                                                             @if($nnMultiple)
                                                                                             <div x-data="{ _mids: (() => { try { const v = nr['{{ $nnName }}']; return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch(e) { return []; } })(), _mshow: false }"
-                                                                                                 x-init="$watch('_mids', v => nr['{{ $nnName }}'] = v)">
+                                                                                                 x-init="$watch('_mids', v => nr['{{ $nnName }}'] = v); $watch(() => nr['{{ $nnName }}'], v => { try { const nv = Array.isArray(v) ? v : (v ? JSON.parse(v) : []); if (JSON.stringify(_mids) !== JSON.stringify(nv)) _mids = nv; } catch(e) {} })">
                                                                                                 <div x-show="_mids.length > 0" class="flex flex-wrap gap-1.5 mb-2">
                                                                                                     <template x-for="_mi in $store._mlib.items.filter(i => _mids.includes(i.id))" :key="_mi.id">
                                                                                                         <div class="relative group">
@@ -1361,7 +1361,7 @@
                                                                                             </div>
                                                                                             @else
                                                                                             <div x-data="{ _mid: nr['{{ $nnName }}'] ? parseInt(nr['{{ $nnName }}']) : null, _mshow: false }"
-                                                                                                 x-init="$watch('_mid', v => nr['{{ $nnName }}'] = v)">
+                                                                                                 x-init="$watch('_mid', v => nr['{{ $nnName }}'] = v); $watch(() => nr['{{ $nnName }}'], v => { const nv = v ? parseInt(v) : null; if (_mid !== nv) _mid = nv; })">
                                                                                                 <div x-show="_mid" class="mb-2">
                                                                                                     <template x-for="_mi in $store._mlib.items.filter(i => i.id === _mid)" :key="_mi.id">
                                                                                                         <div>
@@ -1724,7 +1724,7 @@
 
                                                             @elseif($subField['type'] === 'media')
                                                                 <div x-data="{ _mid: row['{{ $subName }}'] ? parseInt(row['{{ $subName }}']) : null, _mshow: false }"
-                                                                     x-init="$watch('_mid', v => row['{{ $subName }}'] = v)">
+                                                                     x-init="$watch('_mid', v => row['{{ $subName }}'] = v); $watch(() => row['{{ $subName }}'], v => { const nv = v ? parseInt(v) : null; if (_mid !== nv) _mid = nv; })">
                                                                     <div x-show="_mid" class="mb-2">
                                                                         <template x-for="_mi in $store._mlib.items.filter(i => i.id === _mid)" :key="_mi.id">
                                                                             <div>
