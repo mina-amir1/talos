@@ -46,16 +46,23 @@ class ContentManagerController extends Controller
             return redirect()->route('talos.content.create', ['uid' => $uid, 'locale' => $locale]);
         }
 
-        $model = $this->modelService->make($uid);
-        $query = $model->newQuery()->latest();
+        $model       = $this->modelService->make($uid);
+        $manualOrder = (bool) ($contentType['options']['manualOrder'] ?? false);
+        $query       = $model->newQuery();
 
         if ($i18n) {
             $query->where('locale', $locale);
         }
 
-        $entries = $query->paginate(config('talos.default_page_size'));
+        if ($manualOrder) {
+            $query->orderBy('sort_order')->orderBy('id');
+            $entries = $query->get();
+        } else {
+            $query->latest();
+            $entries = $query->paginate(config('talos.default_page_size'));
+        }
 
-        return view('talos.content.index', compact('contentType', 'entries', 'uid', 'i18n', 'locale', 'locales'));
+        return view('talos.content.index', compact('contentType', 'entries', 'uid', 'i18n', 'locale', 'locales', 'manualOrder'));
     }
 
     public function create(string $uid)
@@ -119,6 +126,11 @@ class ContentManagerController extends Controller
         $data['updated_by'] = session('talos_user_id');
 
         $model = $this->modelService->make($uid);
+
+        if ($contentType['options']['manualOrder'] ?? false) {
+            $data['sort_order'] = ($model->newQuery()->max('sort_order') ?? 0) + 1;
+        }
+
         $entry = $model->newQuery()->create($data);
 
         // First entry of this locale group — point localizations_id to itself
@@ -470,6 +482,29 @@ class ContentManagerController extends Controller
         }
 
         return $rules;
+    }
+
+    public function reorder(Request $request, string $uid): \Illuminate\Http\JsonResponse
+    {
+        $contentType = $this->typeService->find($uid);
+
+        if (! $contentType || ! ($contentType['options']['manualOrder'] ?? false)) {
+            return response()->json(['error' => 'Manual ordering is not enabled for this collection.'], 422);
+        }
+
+        $ids = $request->input('ids', []);
+
+        if (empty($ids) || ! is_array($ids)) {
+            return response()->json(['error' => 'Invalid payload.'], 422);
+        }
+
+        $model = $this->modelService->make($uid);
+
+        foreach ($ids as $position => $id) {
+            $model->newQuery()->where('id', (int) $id)->update(['sort_order' => $position + 1]);
+        }
+
+        return response()->json(['success' => true]);
     }
 
     private function canPublish(Request $request, string $uid): bool

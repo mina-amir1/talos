@@ -34,30 +34,44 @@
 
 @section('content')
 @php
-    $attributes = $contentType['attributes'] ?? [];
-    $draftable  = $contentType['options']['draftAndPublish'] ?? false;
+    $attributes  = $contentType['attributes'] ?? [];
+    $draftable   = $contentType['options']['draftAndPublish'] ?? false;
+    $entryCount  = $manualOrder ? count($entries) : $entries->total();
 
     // Pick the first 4 string-ish fields to show as columns
     $displayCols = collect($attributes)->filter(fn($f) => in_array($f['type'], ['string','text','email','uid','integer','boolean','enumeration']))->take(4)->keys()->toArray();
 @endphp
 
-<div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+<div class="bg-white border border-slate-200 rounded-xl overflow-hidden"
+     @if($manualOrder) x-data="manualOrderList('{{ $uid }}')" @endif>
+
     {{-- Table header --}}
     <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between gap-4">
-        <p class="text-sm text-slate-500">
-            {{ $entries->total() }} {{ $entries->total() === 1 ? 'entry' : 'entries' }}
-            @if($draftable)
-                <span class="text-slate-400 ml-2 text-xs">
-                    (drafts visible — public API only exposes published)
+        <div class="flex items-center gap-3">
+            <p class="text-sm text-slate-500">
+                {{ $entryCount }} {{ $entryCount === 1 ? 'entry' : 'entries' }}
+                @if($draftable)
+                    <span class="text-slate-400 ml-2 text-xs">(drafts visible — public API only exposes published)</span>
+                @endif
+            </p>
+            @if($manualOrder)
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full border border-blue-100">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                    Manual order — drag rows to reorder
                 </span>
+                <span x-show="saving" class="text-xs text-slate-400 animate-pulse">Saving…</span>
+                <span x-show="saved" x-transition class="text-xs text-emerald-600">Order saved</span>
             @endif
-        </p>
+        </div>
         <div class="text-xs text-slate-400 font-mono">
             {{ $contentType['info']['pluralName'] }} · {{ count($attributes) }} fields
         </div>
     </div>
 
-    @if($entries->isEmpty())
+    @php $isEmpty = $manualOrder ? count($entries) === 0 : $entries->isEmpty(); @endphp
+    @if($isEmpty)
         <div class="flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
             <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -71,6 +85,9 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-slate-200">
+                        @if($manualOrder)
+                            <th class="w-8 px-3 py-3"></th>{{-- drag handle column --}}
+                        @endif
                         <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider w-12">ID</th>
                         @foreach($displayCols as $col)
                             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -87,17 +104,23 @@
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200">
+                <tbody class="divide-y divide-slate-200" @if($manualOrder) x-ref="tbody" data-no-dirty @endif>
                     @foreach($entries as $entry)
-                        <tr class="hover:bg-slate-100 transition-colors">
+                        <tr class="hover:bg-slate-100 transition-colors" @if($manualOrder) data-id="{{ $entry->id }}" @endif>
+                            @if($manualOrder)
+                                <td class="px-3 py-3 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing sort-handle" title="Drag to reorder">
+                                    <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                                        <circle cx="5" cy="4" r="1.5"/><circle cx="5" cy="8" r="1.5"/><circle cx="5" cy="12" r="1.5"/>
+                                        <circle cx="11" cy="4" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="11" cy="12" r="1.5"/>
+                                    </svg>
+                                </td>
+                            @endif
                             <td class="px-4 py-3 text-slate-400 text-xs font-mono">{{ $entry->id }}</td>
                             @foreach($displayCols as $col)
                                 <td class="px-4 py-3 text-slate-600">
                                     @php $val = $entry->$col; @endphp
                                     @if(is_bool($val))
-                                        <span class="{{ $val ? 'text-emerald-700' : 'text-slate-400' }}">
-                                            {{ $val ? 'Yes' : 'No' }}
-                                        </span>
+                                        <span class="{{ $val ? 'text-emerald-700' : 'text-slate-400' }}">{{ $val ? 'Yes' : 'No' }}</span>
                                     @elseif(is_array($val))
                                         <span class="text-slate-500">{{ implode(', ', $val) }}</span>
                                     @elseif(is_string($val) && strlen($val) > 60)
@@ -164,12 +187,61 @@
             </table>
         </div>
 
-        {{-- Pagination --}}
-        @if($entries->hasPages())
+        {{-- Pagination (only in non-manual-order mode) --}}
+        @if(!$manualOrder && $entries->hasPages())
             <div class="px-5 py-4 border-t border-slate-200">
                 {{ $entries->links() }}
             </div>
         @endif
     @endif
 </div>
+
+@if($manualOrder)
+<script>
+function manualOrderList(uid) {
+    return {
+        saving: false,
+        saved:  false,
+        _savedTimer: null,
+
+        init() {
+            this.$nextTick(() => {
+                if (typeof Sortable === 'undefined' || !this.$refs.tbody) return;
+                Sortable.create(this.$refs.tbody, {
+                    handle:    '.sort-handle',
+                    animation: 150,
+                    ghostClass: 'opacity-40',
+                    onEnd: () => this.persist(),
+                });
+            });
+        },
+
+        async persist() {
+            const rows = Array.from(this.$refs.tbody.querySelectorAll('tr[data-id]'));
+            const ids  = rows.map(r => r.dataset.id);
+
+            this.saving = true;
+            this.saved  = false;
+            clearTimeout(this._savedTimer);
+
+            try {
+                await fetch(`/{{ config('talos.admin_prefix', 'talos') }}/content-manager/${uid}/reorder`, {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({ ids }),
+                });
+                this.saved = true;
+                this._savedTimer = setTimeout(() => this.saved = false, 2500);
+            } finally {
+                this.saving = false;
+            }
+        },
+    };
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+@endif
 @endsection

@@ -68,7 +68,7 @@ foreach(($components ?? []) as $cat => $comps) {
     }
 }
 @endphp
-<div x-data="fieldBuilder({{ json_encode($contentType['attributes'] ?? []) }}, '{{ $uid }}', {{ json_encode($flatComponents) }})"
+<div x-data="fieldBuilder({{ json_encode($contentType['attributes'] ?? []) }}, '{{ $uid }}', {{ json_encode($flatComponents) }}, {{ json_encode($contentType['options'] ?? []) }})"
      @keydown.escape.window="compBuilderOpen ? (cc()?.cModal ? compCloseModal() : (compStack.length > 1 ? compPopFrame() : closeCompBuilder())) : closeModal()">
 
     {{-- ── Model header ──────────────────────────────────────────── --}}
@@ -216,6 +216,34 @@ foreach(($components ?? []) as $cat => $comps) {
                     </svg>
                 </div>
                 Add another field
+            </button>
+        </div>
+    </div>
+
+    {{-- ── Manual Ordering ──────────────────────────────────────────────── --}}
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 mt-6">
+        <div class="flex items-start justify-between gap-6">
+            <div>
+                <h3 class="text-slate-800 font-semibold">Manual Ordering</h3>
+                <p class="text-sm text-slate-400 mt-1 max-w-sm">
+                    Let editors drag entries into any sequence. The API returns them in that exact order instead of by date.
+                </p>
+                <template x-if="manualOrder">
+                    <p class="mt-3 flex items-center gap-1.5 text-xs text-blue-600">
+                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        A <span class="font-mono bg-blue-50 px-1 rounded">sort_order</span> column will be added on save. New entries append at the bottom.
+                    </p>
+                </template>
+            </div>
+            {{-- Toggle --}}
+            <button type="button"
+                    @click="manualOrder = !manualOrder; talos.markDirty()"
+                    :class="manualOrder ? 'bg-blue-600' : 'bg-slate-200'"
+                    class="relative mt-0.5 inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
+                <span :class="manualOrder ? 'translate-x-5' : 'translate-x-0'"
+                      class="inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
             </button>
         </div>
     </div>
@@ -1226,7 +1254,7 @@ foreach(($components ?? []) as $cat => $comps) {
 </div>
 
 <script>
-function fieldBuilder(initialAttributes, uid, initialComponents) {
+function fieldBuilder(initialAttributes, uid, initialComponents, initialOptions) {
     const S = {
         string:      { icon: 'Aa',  bg: 'bg-blue-500/20',    text: 'text-blue-600',   badge: 'bg-blue-500/15 text-blue-600',     label: 'Short text' },
         text:        { icon: '¶',   bg: 'bg-blue-500/20',    text: 'text-blue-600',   badge: 'bg-blue-500/15 text-blue-600',     label: 'Long text' },
@@ -1294,6 +1322,9 @@ function fieldBuilder(initialAttributes, uid, initialComponents) {
         newSubFieldType:   'string',
         newSubFieldConfig: {},
         allComponents:     Array.isArray(initialComponents) ? initialComponents : [],
+
+        // ── Manual ordering ───────────────────────────────────────────
+        manualOrder: !!((initialOptions || {}).manualOrder),
 
         // ── Component builder state ────────────────────────────────────
         compStack:        [],
@@ -1565,7 +1596,7 @@ function fieldBuilder(initialAttributes, uid, initialComponents) {
                 const r = await fetch(`/{{ config('talos.admin_prefix', 'talos') }}/content-type-builder/${uid}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                    body: JSON.stringify({ attributes: toObject(this.fields), _renames: this.renames }),
+                    body: JSON.stringify({ attributes: toObject(this.fields), _renames: this.renames, manualOrder: this.manualOrder }),
                 });
                 const data = await r.json();
                 if (data.success) {

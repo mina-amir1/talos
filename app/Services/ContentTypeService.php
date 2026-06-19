@@ -73,6 +73,15 @@ class ContentTypeService
         $renames = $data['_renames'] ?? [];
         unset($data['_renames']);
 
+        // Merge option flags without clobbering sibling flags
+        if (array_key_exists('manualOrder', $data)) {
+            $data['options'] = array_merge(
+                $existing['options'] ?? [],
+                ['manualOrder' => (bool) $data['manualOrder']]
+            );
+            unset($data['manualOrder']);
+        }
+
         $schema = array_merge($existing, $data);
         unset($schema['__uid']);
 

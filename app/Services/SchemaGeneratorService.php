@@ -34,6 +34,10 @@ class SchemaGeneratorService
                 $bp->timestamp('published_at')->nullable();
             }
 
+            if ($schema['options']['manualOrder'] ?? false) {
+                $bp->unsignedInteger('sort_order')->nullable()->index();
+            }
+
             if ($schema['options']['i18n'] ?? false) {
                 $bp->string('locale', 10)->default(config('talos.default_locale'))->index();
                 $bp->unsignedBigInteger('localizations_id')->nullable()->index();
@@ -78,6 +82,10 @@ class SchemaGeneratorService
                 if (! Schema::hasColumn($table, $name) && ! in_array($name, $renamedTargets)) {
                     $this->addColumn($bp, $name, $field);
                 }
+            }
+
+            if (($schema['options']['manualOrder'] ?? false) && ! Schema::hasColumn($table, 'sort_order')) {
+                $bp->unsignedInteger('sort_order')->nullable()->index();
             }
 
             if (($schema['options']['i18n'] ?? false) && ! Schema::hasColumn($table, 'locale')) {

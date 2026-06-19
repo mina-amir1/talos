@@ -75,6 +75,8 @@ class ContentApiController extends Controller
         if ($request->filled('sort')) {
             [$field, $dir] = array_pad(explode(':', $request->sort), 2, 'asc');
             $query->orderBy($field, $dir);
+        } elseif ($contentType['options']['manualOrder'] ?? false) {
+            $query->orderBy('sort_order')->orderBy('id');
         } else {
             $query->latest();
         }
