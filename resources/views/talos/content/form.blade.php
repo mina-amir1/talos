@@ -1,6 +1,8 @@
 @extends('talos.layouts.app')
 
 @php
+    /* @var \Illuminate\Support\Collection $mediaItems */
+    /* @var array $components */
     $isEdit = isset($entry);
     $title  = $isEdit ? 'Edit entry' : 'Create entry';
 @endphp
@@ -55,9 +57,7 @@
     $locale      = $locale ?? config('talos.default_locale');
     $locales     = $locales ?? app(\App\Services\LocaleService::class)->all();
     $siblings    = $siblings ?? [];
-    /** @var \Illuminate\Support\Collection $mediaItems */
     $mediaItems  = $mediaItems ?? collect();
-    /** @var array $components */
     $components  = $components ?? [];
 
     // Shared helper: parse enum options from schema string

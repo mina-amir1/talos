@@ -56,11 +56,11 @@ class ContentManagerController extends Controller
 
         if ($manualOrder) {
             $query->orderBy('sort_order')->orderBy('id');
-            $entries = $query->get();
         } else {
             $query->latest();
-            $entries = $query->paginate(config('talos.default_page_size'));
         }
+
+        $entries = $query->paginate(config('talos.default_page_size', 25));
 
         return view('talos.content.index', compact('contentType', 'entries', 'uid', 'i18n', 'locale', 'locales', 'manualOrder'));
     }
@@ -492,19 +492,57 @@ class ContentManagerController extends Controller
             return response()->json(['error' => 'Manual ordering is not enabled for this collection.'], 422);
         }
 
-        $ids = $request->input('ids', []);
+        $ids     = $request->input('ids', []);
+        $page    = max(1, (int) $request->input('page', 1));
+        $perPage = max(1, (int) $request->input('per_page', 25));
 
         if (empty($ids) || ! is_array($ids)) {
             return response()->json(['error' => 'Invalid payload.'], 422);
         }
 
-        $model = $this->modelService->make($uid);
+        $model  = $this->modelService->make($uid);
+        $all    = $model->newQuery()->orderBy('sort_order')->orderBy('id')->pluck('id')->toArray();
+        $offset = ($page - 1) * $perPage;
 
-        foreach ($ids as $position => $id) {
-            $model->newQuery()->where('id', (int) $id)->update(['sort_order' => $position + 1]);
+        array_splice($all, $offset, count($ids), array_map('intval', $ids));
+
+        foreach ($all as $idx => $id) {
+            $model->newQuery()->where('id', $id)->update(['sort_order' => $idx + 1]);
         }
 
         return response()->json(['success' => true]);
+    }
+
+    public function move(Request $request, string $uid): \Illuminate\Http\JsonResponse
+    {
+        $contentType = $this->typeService->find($uid);
+
+        if (! $contentType || ! ($contentType['options']['manualOrder'] ?? false)) {
+            return response()->json(['error' => 'Manual ordering is not enabled for this collection.'], 422);
+        }
+
+        $id  = (int) $request->input('id');
+        $pos = (int) $request->input('position');
+
+        $model = $this->modelService->make($uid);
+        $all   = $model->newQuery()->orderBy('sort_order')->orderBy('id')->pluck('id')->toArray();
+        $total = count($all);
+        $pos   = max(1, min($pos, $total));
+
+        $current = array_search($id, $all);
+
+        if ($current === false) {
+            return response()->json(['error' => 'Entry not found.'], 404);
+        }
+
+        array_splice($all, $current, 1);
+        array_splice($all, $pos - 1, 0, [$id]);
+
+        foreach ($all as $idx => $itemId) {
+            $model->newQuery()->where('id', $itemId)->update(['sort_order' => $idx + 1]);
+        }
+
+        return response()->json(['success' => true, 'position' => $pos]);
     }
 
     private function canPublish(Request $request, string $uid): bool
