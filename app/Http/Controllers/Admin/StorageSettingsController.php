@@ -89,7 +89,7 @@ class StorageSettingsController extends Controller
             );
             return response()->json(['ok' => $ok]);
         } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'error' => $e->getMessage()]);
+            return response()->json(['ok' => false, 'error' => $this->friendlyConnectionError($e)]);
         }
     }
 
@@ -173,7 +173,21 @@ class StorageSettingsController extends Controller
     {
         $this->requireSuperAdmin($request);
 
-        return response()->json(['ok' => $this->storage->testBackupConnection()]);
+        $accountId = $request->input('r2_backup_account_id') ?: TalosSettings::get('r2_backup_account_id', '');
+        $accessKey = $request->input('r2_backup_access_key') ?: TalosSettings::get('r2_backup_access_key', '');
+        $secretKey = $request->input('r2_backup_secret_key') ?: TalosSettings::get('r2_backup_secret_key', '');
+        $bucket    = $request->input('r2_backup_bucket')     ?: TalosSettings::get('r2_backup_bucket', '');
+
+        if (! $accountId || ! $accessKey || ! $secretKey || ! $bucket) {
+            return response()->json(['ok' => false, 'error' => 'All credentials are required. Enter the secret key to test.']);
+        }
+
+        try {
+            $this->storage->testBackupConnectionWith($accountId, $accessKey, $secretKey, $bucket);
+            return response()->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'error' => $this->friendlyConnectionError($e)]);
+        }
     }
 
     public function triggerBackup(Request $request)
@@ -186,6 +200,15 @@ class StorageSettingsController extends Controller
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function downloadBackup(Request $request)
+    {
+        $this->requireSuperAdmin($request);
+
+        ['path' => $path, 'name' => $name] = $this->backup->createZip();
+
+        return response()->download($path, $name)->deleteFileAfterSend(true);
     }
 
     public function deleteBackup(Request $request)
@@ -203,5 +226,44 @@ class StorageSettingsController extends Controller
         if (! $request->attributes->get('talos_user')?->is_super_admin) {
             abort(403, 'Super admin only.');
         }
+    }
+
+    private function friendlyConnectionError(\Throwable $e): string
+    {
+        $msg = $e->getMessage();
+
+        if (str_contains($msg, 'Could not resolve host') || str_contains($msg, 'cURL error 6')) {
+            return 'Could not reach the storage server. Your Account ID is likely incorrect.';
+        }
+
+        if (str_contains($msg, 'TLS') || str_contains($msg, 'SSL') || str_contains($msg, 'handshake') || str_contains($msg, 'cURL error 35')) {
+            return 'Secure connection failed. Your Account ID is likely incorrect.';
+        }
+
+        if (str_contains($msg, 'timed out') || str_contains($msg, 'cURL error 28')) {
+            return 'Connection timed out. Check your Account ID and try again.';
+        }
+
+        if (str_contains($msg, 'InvalidAccessKeyId')) {
+            return 'Access Key ID not recognised. Double-check your Access Key ID.';
+        }
+
+        if (str_contains($msg, 'SignatureDoesNotMatch')) {
+            return 'Secret Access Key is incorrect. Please re-enter it.';
+        }
+
+        if (str_contains($msg, 'NoSuchBucket')) {
+            return 'Bucket not found. Make sure the bucket name is correct and the bucket exists.';
+        }
+
+        if (str_contains($msg, 'AccessDenied') || str_contains($msg, '403 Forbidden')) {
+            return 'Access denied. Your credentials do not have permission to access this bucket.';
+        }
+
+        if (str_contains($msg, 'NoSuchKey') || str_contains($msg, '404')) {
+            return 'Bucket or resource not found. Check the bucket name.';
+        }
+
+        return 'Could not connect. Please check all credentials and try again.';
     }
 }

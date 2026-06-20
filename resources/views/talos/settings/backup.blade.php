@@ -22,7 +22,7 @@
 
             <div>
                 <label class="block text-xs font-medium text-slate-600 mb-1">Account ID</label>
-                <input type="text" name="r2_backup_account_id"
+                <input type="text" id="backup_account_id" name="r2_backup_account_id"
                        value="{{ old('r2_backup_account_id', $config['r2_backup_account_id']) }}"
                        class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                        placeholder="abc123...">
@@ -31,7 +31,7 @@
 
             <div>
                 <label class="block text-xs font-medium text-slate-600 mb-1">Access Key ID</label>
-                <input type="text" name="r2_backup_access_key"
+                <input type="text" id="backup_access_key" name="r2_backup_access_key"
                        value="{{ old('r2_backup_access_key', $config['r2_backup_access_key']) }}"
                        class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                        placeholder="Access Key ID">
@@ -40,14 +40,14 @@
 
             <div>
                 <label class="block text-xs font-medium text-slate-600 mb-1">Secret Access Key</label>
-                <input type="password" name="r2_backup_secret_key"
+                <input type="password" id="backup_secret_key" name="r2_backup_secret_key"
                        class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                       placeholder="{{ $config['r2_backup_access_key'] ? '(stored — leave blank to keep)' : 'Secret Access Key' }}">
+                       placeholder="{{ $config['r2_backup_access_key'] ? '(stored — enter to override)' : 'Secret Access Key' }}">
             </div>
 
             <div>
                 <label class="block text-xs font-medium text-slate-600 mb-1">Bucket Name</label>
-                <input type="text" name="r2_backup_bucket"
+                <input type="text" id="backup_bucket" name="r2_backup_bucket"
                        value="{{ old('r2_backup_bucket', $config['r2_backup_bucket']) }}"
                        class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                        placeholder="my-backup-bucket">
@@ -98,17 +98,24 @@
         <div class="flex items-center justify-between">
             <div>
                 <h2 class="text-sm font-semibold text-slate-800">Manual Backup</h2>
-                <p class="text-xs text-slate-500 mt-0.5">
-                    Runs immediately. Backs up the SQLite database and all schema files.
-                    @if($config['r2_backup_last_run'])
-                        Last run: {{ \Illuminate\Support\Carbon::parse($config['r2_backup_last_run'])->diffForHumans() }}
-                    @endif
-                </p>
+                <p class="text-xs text-slate-500 mt-0.5">Runs immediately. Backs up the SQLite database and all schema files.</p>
+                @if($config['r2_backup_last_run'])
+                    <p class="text-xs text-slate-400 mt-0.5">Last run: {{ \Illuminate\Support\Carbon::parse($config['r2_backup_last_run'])->diffForHumans() }}</p>
+                @endif
             </div>
-            <button id="btn-trigger-backup"
-                    class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                Run Now
-            </button>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('talos.settings.backup.download') }}"
+                   class="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Download
+                </a>
+                <button id="btn-trigger-backup"
+                        class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                    Run Now
+                </button>
+            </div>
         </div>
         <p id="backup-result" class="text-xs mt-3 hidden"></p>
     </div>
@@ -155,13 +162,22 @@
     document.getElementById('btn-test-backup')?.addEventListener('click', async function () {
         this.textContent = 'Testing…';
         try {
-            const res  = await fetch('{{ route('talos.settings.backup.test') }}', {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            const res = await fetch('{{ route('talos.settings.backup.test') }}', {
+                method:  'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                },
+                body: JSON.stringify({
+                    r2_backup_account_id: document.getElementById('backup_account_id').value.trim(),
+                    r2_backup_access_key: document.getElementById('backup_access_key').value.trim(),
+                    r2_backup_secret_key: document.getElementById('backup_secret_key').value,
+                    r2_backup_bucket:     document.getElementById('backup_bucket').value.trim(),
+                }),
             });
             const data = await res.json();
             if (data.ok) talos.toast('Connection successful!', 'success');
-            else talos.toast('Connection failed. Check credentials.', 'error');
+            else talos.toast('Connection failed: ' + (data.error ?? 'Check credentials.'), 'error');
         } catch { talos.toast('Request failed.', 'error'); }
         this.textContent = 'Test Connection';
     });
@@ -177,8 +193,8 @@
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             });
             const data = await res.json();
-            if (data.error) talos.toast('Error: ' + data.error, 'error');
-            else { talos.toast('Backup saved: ' + data.key, 'success'); setTimeout(() => location.reload(), 2000); }
+            if (data.error) talos.toast('Backup failed: ' + data.error, 'error');
+            else talos.toast('Backup complete!', 'success');
         } catch { talos.toast('Request failed.', 'error'); }
         this.disabled = false;
         this.textContent = 'Run Now';

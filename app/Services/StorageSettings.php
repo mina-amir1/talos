@@ -99,19 +99,20 @@ class StorageSettings
 
     public function testBackupConnection(): bool
     {
-        try {
-            $disk = $this->buildR2Disk(
-                TalosSettings::get('r2_backup_account_id'),
-                TalosSettings::get('r2_backup_access_key'),
-                TalosSettings::get('r2_backup_secret_key'),
-                TalosSettings::get('r2_backup_bucket'),
-            );
-            $disk->put('.talos-probe', 'ok');
-            $disk->delete('.talos-probe');
-            return true;
-        } catch (\Throwable) {
-            return false;
-        }
+        return $this->testBackupConnectionWith(
+            TalosSettings::get('r2_backup_account_id'),
+            TalosSettings::get('r2_backup_access_key'),
+            TalosSettings::get('r2_backup_secret_key'),
+            TalosSettings::get('r2_backup_bucket'),
+        );
+    }
+
+    public function testBackupConnectionWith(string $accountId, string $accessKey, string $secretKey, string $bucket): bool
+    {
+        $disk = $this->buildR2Disk($accountId, $accessKey, $secretKey, $bucket);
+        $disk->put('.talos-probe', 'ok');
+        $disk->delete('.talos-probe');
+        return true;
     }
 
     private function buildR2Disk(string $accountId, string $accessKey, string $secretKey, string $bucket): Filesystem
@@ -124,6 +125,7 @@ class StorageSettings
             'bucket'                  => $bucket,
             'endpoint'                => "https://{$accountId}.r2.cloudflarestorage.com",
             'use_path_style_endpoint' => false,
+            'throw'                   => true,
         ]);
     }
 }
