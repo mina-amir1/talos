@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StorageSettingsController;
+use App\Http\Controllers\Admin\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => redirect()->route('talos.dashboard'));
@@ -114,6 +115,14 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::delete('backup',                   [StorageSettingsController::class, 'deleteBackup'])->name('backup.delete');
             Route::post('backup/restore',             [StorageSettingsController::class, 'restoreBackup'])->name('backup.restore');
             Route::post('backup/restore-upload',      [StorageSettingsController::class, 'uploadRestoreBackup'])->name('backup.restore-upload');
+
+            // Webhooks (super admin only — enforced in controller)
+            Route::get('webhooks',                    [WebhookController::class, 'index'])->name('webhooks');
+            Route::post('webhooks',                   [WebhookController::class, 'store'])->name('webhooks.store');
+            Route::put('webhooks/{id}',               [WebhookController::class, 'update'])->name('webhooks.update');
+            Route::delete('webhooks/{id}',            [WebhookController::class, 'destroy'])->name('webhooks.destroy');
+            Route::post('webhooks/{id}/toggle',       [WebhookController::class, 'toggle'])->name('webhooks.toggle');
+            Route::post('webhooks/{id}/test',         [WebhookController::class, 'test'])->name('webhooks.test');
         });
     });
 });

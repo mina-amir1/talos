@@ -20,9 +20,7 @@ class StorageSettingsController extends Controller
 
     public function storage(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
-        $config = [
+$config = [
             'r2_media_enabled'    => TalosSettings::get('r2_media_enabled', '0'),
             'r2_media_account_id' => TalosSettings::get('r2_media_account_id', ''),
             'r2_media_access_key' => TalosSettings::get('r2_media_access_key', ''),
@@ -38,9 +36,7 @@ class StorageSettingsController extends Controller
 
     public function saveStorage(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
-        $request->validate([
+$request->validate([
             'r2_media_account_id' => 'required|string',
             'r2_media_access_key' => 'required|string',
             'r2_media_bucket'     => 'required|string',
@@ -63,9 +59,7 @@ class StorageSettingsController extends Controller
 
     public function toggleStorage(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
-        $enable = $request->boolean('enabled');
+$enable = $request->boolean('enabled');
 
         if ($enable && ! $this->storage->isR2MediaConfigured()) {
             return response()->json(['error' => 'Save R2 credentials first.'], 422);
@@ -78,9 +72,7 @@ class StorageSettingsController extends Controller
 
     public function testStorage(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
-        try {
+try {
             $ok = $this->storage->testMediaConnectionWith(
                 $request->input('r2_media_account_id') ?: TalosSettings::get('r2_media_account_id'),
                 $request->input('r2_media_access_key')  ?: TalosSettings::get('r2_media_access_key'),
@@ -95,9 +87,7 @@ class StorageSettingsController extends Controller
 
     public function startMigration(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
-        if (! $this->storage->isR2MediaConfigured()) {
+if (! $this->storage->isR2MediaConfigured()) {
             return response()->json(['error' => 'Configure R2 credentials first.'], 422);
         }
 
@@ -126,9 +116,7 @@ class StorageSettingsController extends Controller
 
     public function backup(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
-        $config = [
+$config = [
             'r2_backup_account_id' => TalosSettings::get('r2_backup_account_id', ''),
             'r2_backup_access_key' => TalosSettings::get('r2_backup_access_key', ''),
             'r2_backup_bucket'     => TalosSettings::get('r2_backup_bucket', ''),
@@ -144,9 +132,7 @@ class StorageSettingsController extends Controller
 
     public function saveBackup(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
-        $request->validate([
+$request->validate([
             'r2_backup_account_id' => 'required|string',
             'r2_backup_access_key' => 'required|string',
             'r2_backup_bucket'     => 'required|string',
@@ -171,9 +157,7 @@ class StorageSettingsController extends Controller
 
     public function testBackup(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
-        $accountId = $request->input('r2_backup_account_id') ?: TalosSettings::get('r2_backup_account_id', '');
+$accountId = $request->input('r2_backup_account_id') ?: TalosSettings::get('r2_backup_account_id', '');
         $accessKey = $request->input('r2_backup_access_key') ?: TalosSettings::get('r2_backup_access_key', '');
         $secretKey = $request->input('r2_backup_secret_key') ?: TalosSettings::get('r2_backup_secret_key', '');
         $bucket    = $request->input('r2_backup_bucket')     ?: TalosSettings::get('r2_backup_bucket', '');
@@ -195,7 +179,6 @@ class StorageSettingsController extends Controller
 
     public function restoreBackup(Request $request)
     {
-        $this->requireSuperAdmin($request);
         $request->validate(['key' => 'required|string']);
 
         try {
@@ -208,7 +191,6 @@ class StorageSettingsController extends Controller
 
     public function uploadRestoreBackup(Request $request)
     {
-        $this->requireSuperAdmin($request);
         $request->validate(['file' => 'required|file|extensions:zip']);
 
         try {
@@ -221,8 +203,6 @@ class StorageSettingsController extends Controller
 
     public function triggerBackup(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
         try {
             $key = $this->backup->run();
             return response()->json(['key' => $key]);
@@ -233,8 +213,6 @@ class StorageSettingsController extends Controller
 
     public function downloadBackup(Request $request)
     {
-        $this->requireSuperAdmin($request);
-
         ['path' => $path, 'name' => $name] = $this->backup->createZip();
 
         return response()->download($path, $name)->deleteFileAfterSend(true);
@@ -242,20 +220,12 @@ class StorageSettingsController extends Controller
 
     public function deleteBackup(Request $request)
     {
-        $this->requireSuperAdmin($request);
         $request->validate(['key' => 'required|string']);
         $this->backup->delete($request->input('key'));
         return response()->json(['deleted' => true]);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private function requireSuperAdmin(Request $request): void
-    {
-        if (! $request->attributes->get('talos_user')?->is_super_admin) {
-            abort(403, 'Super admin only.');
-        }
-    }
 
     private function friendlyConnectionError(\Throwable $e): string
     {

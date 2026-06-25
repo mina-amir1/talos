@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\DispatchWebhook;
 use App\Models\TalosMedia;
 use App\Services\ContentTypeService;
 use App\Services\DynamicModelService;
@@ -138,6 +139,8 @@ class ContentManagerController extends Controller
             $entry->update(['localizations_id' => $entry->id]);
         }
 
+        DispatchWebhook::dispatch('entry.create', $uid, $entry->fresh()->toArray());
+
         if (($contentType['kind'] ?? 'collectionType') === 'singleType') {
             return redirect()
                 ->route('talos.content.edit', ['uid' => $uid, 'id' => $entry->id])
@@ -234,6 +237,8 @@ class ContentManagerController extends Controller
 
         $entry->update($data);
 
+        DispatchWebhook::dispatch('entry.update', $uid, $entry->fresh()->toArray());
+
         if (($contentType['kind'] ?? 'collectionType') === 'singleType') {
             return redirect()
                 ->route('talos.content.edit', ['uid' => $uid, 'id' => $id])
@@ -252,6 +257,8 @@ class ContentManagerController extends Controller
         $model = $this->modelService->make($uid);
         $model->newQuery()->findOrFail($id)->delete();
 
+        DispatchWebhook::dispatch('entry.delete', $uid, ['id' => $id]);
+
         return redirect()
             ->route('talos.content.index', ['uid' => $uid])
             ->with('success', 'Entry deleted.');
@@ -260,7 +267,10 @@ class ContentManagerController extends Controller
     public function publish(string $uid, int $id)
     {
         $model = $this->modelService->make($uid);
-        $model->newQuery()->findOrFail($id)->update(['published_at' => now()]);
+        $entry = $model->newQuery()->findOrFail($id);
+        $entry->update(['published_at' => now()]);
+
+        DispatchWebhook::dispatch('entry.publish', $uid, $entry->fresh()->toArray());
 
         return back()->with('success', 'Entry published.');
     }
@@ -268,7 +278,10 @@ class ContentManagerController extends Controller
     public function unpublish(string $uid, int $id)
     {
         $model = $this->modelService->make($uid);
-        $model->newQuery()->findOrFail($id)->update(['published_at' => null]);
+        $entry = $model->newQuery()->findOrFail($id);
+        $entry->update(['published_at' => null]);
+
+        DispatchWebhook::dispatch('entry.unpublish', $uid, $entry->fresh()->toArray());
 
         return back()->with('success', 'Entry unpublished.');
     }

@@ -207,7 +207,7 @@
             @endif
 
             {{-- Assets & Config --}}
-            @if($canSection('media') || $canSection('settings'))
+            @if($canSection('media') || $canSection('settings') || $canSection('locales') || $canSection('api-tokens') || $canSection('storage') || $canSection('backup') || $canSection('webhooks'))
                 <div class="pt-3 mt-2" style="border-top:1px solid #e2e8f0">
                     <p class="nav-section-label">Assets & Config</p>
                     @if($canSection('media'))
@@ -220,7 +220,7 @@
                             Media Library
                         </a>
                     @endif
-                    @if($canSection('settings'))
+                    @if($canSection('locales'))
                         <a href="{{ route('talos.settings.locales') }}"
                            class="sidebar-link {{ request()->is('*settings/locales*') ? 'active' : '' }}">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,6 +229,8 @@
                             </svg>
                             Locales
                         </a>
+                    @endif
+                    @if($canSection('settings'))
                         <a href="{{ route('talos.settings.roles') }}"
                            class="sidebar-link {{ request()->is('*settings/roles*') ? 'active' : '' }}">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,6 +247,8 @@
                             </svg>
                             Admin Users
                         </a>
+                    @endif
+                    @if($canSection('api-tokens'))
                         <a href="{{ route('talos.settings.api-tokens') }}"
                            class="sidebar-link {{ request()->is('*settings/api-tokens*') ? 'active' : '' }}">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,8 +257,8 @@
                             </svg>
                             API Tokens
                         </a>
-
-                        @if($isSA)
+                    @endif
+                    @if($canSection('storage'))
                         <a href="{{ route('talos.settings.storage') }}"
                            class="sidebar-link {{ request()->is('*settings/storage*') ? 'active' : '' }}">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,6 +267,8 @@
                             </svg>
                             Storage
                         </a>
+                    @endif
+                    @if($canSection('backup'))
                         <a href="{{ route('talos.settings.backup') }}"
                            class="sidebar-link {{ request()->is('*settings/backup*') ? 'active' : '' }}">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,7 +277,16 @@
                             </svg>
                             Backup
                         </a>
-                        @endif
+                    @endif
+                    @if($canSection('webhooks'))
+                        <a href="{{ route('talos.settings.webhooks') }}"
+                           class="sidebar-link {{ request()->is('*settings/webhooks*') ? 'active' : '' }}">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            Webhooks
+                        </a>
                     @endif
                 </div>
             @endif

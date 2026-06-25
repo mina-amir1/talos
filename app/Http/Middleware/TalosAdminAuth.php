@@ -68,6 +68,11 @@ class TalosAdminAuth
             str_starts_with($routeName, 'talos.content-type-builder.') => 'content-type-builder',
             str_starts_with($routeName, 'talos.components.')           => 'components',
             str_starts_with($routeName, 'talos.media.')                => 'media',
+            str_starts_with($routeName, 'talos.settings.locales')      => 'locales',
+            str_starts_with($routeName, 'talos.settings.api-tokens')   => 'api-tokens',
+            str_starts_with($routeName, 'talos.settings.storage')      => 'storage',
+            str_starts_with($routeName, 'talos.settings.backup')       => 'backup',
+            str_starts_with($routeName, 'talos.settings.webhooks')     => 'webhooks',
             str_starts_with($routeName, 'talos.settings.')             => 'settings',
             default                                                     => null,
         };

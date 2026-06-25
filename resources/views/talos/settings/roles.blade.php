@@ -9,7 +9,12 @@
         'content-type-builder' => 'Content-Type Builder',
         'components'           => 'Components',
         'media'                => 'Media Library',
-        'settings'             => 'Settings',
+        'settings'             => 'Settings (Roles & Users)',
+        'locales'              => 'Locales',
+        'api-tokens'           => 'API Tokens',
+        'storage'              => 'Storage',
+        'backup'               => 'Backup',
+        'webhooks'             => 'Webhooks',
     ];
     $cmActions = ['read' => 'Read', 'create' => 'Create', 'update' => 'Update', 'delete' => 'Delete', 'publish' => 'Publish'];
 @endphp
@@ -207,6 +212,11 @@ function roleEditor(id, existingPerms, types, updateUrl) {
             'components':           existingPerms?.sections?.['components'] ?? false,
             'media':                existingPerms?.sections?.['media'] ?? false,
             'settings':             existingPerms?.sections?.['settings'] ?? false,
+            'locales':              existingPerms?.sections?.['locales'] ?? false,
+            'api-tokens':           existingPerms?.sections?.['api-tokens'] ?? false,
+            'storage':              existingPerms?.sections?.['storage'] ?? false,
+            'backup':               existingPerms?.sections?.['backup'] ?? false,
+            'webhooks':             existingPerms?.sections?.['webhooks'] ?? false,
         },
         contentManager: {},
 
