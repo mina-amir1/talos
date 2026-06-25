@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\TalosSettings;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use ZipArchive;
@@ -121,5 +122,108 @@ class BackupService
     public function delete(string $key): void
     {
         $this->storage->backupDisk()->delete($key);
+    }
+
+    public function restore(string $key): void
+    {
+        $disk    = $this->storage->backupDisk();
+        $tmpPath = sys_get_temp_dir() . '/talos-restore-' . basename($key);
+
+        $stream = $disk->readStream($key);
+        if (! $stream) {
+            throw new \RuntimeException("Could not open backup file from R2. Check bucket permissions.");
+        }
+
+        try {
+            $dest = fopen($tmpPath, 'wb');
+            stream_copy_to_stream($stream, $dest);
+            fclose($dest);
+            fclose($stream);
+        } catch (\Throwable $e) {
+            if (file_exists($tmpPath)) {
+                unlink($tmpPath);
+            }
+            throw $e;
+        }
+
+        try {
+            $this->restoreFromPath($tmpPath);
+        } finally {
+            if (file_exists($tmpPath)) {
+                unlink($tmpPath);
+            }
+        }
+    }
+
+    public function restoreFromUpload(string $uploadedPath): void
+    {
+        $this->restoreFromPath($uploadedPath);
+    }
+
+    private function restoreFromPath(string $zipPath): void
+    {
+        $zip    = new ZipArchive();
+        $result = $zip->open($zipPath);
+        if ($result !== true) {
+            throw new \RuntimeException("Cannot open zip archive (error code: {$result}).");
+        }
+        if ($zip->locateName('database/talos.sqlite') === false) {
+            $zip->close();
+            throw new \RuntimeException('Invalid backup: missing database/talos.sqlite.');
+        }
+
+        $extractDir = sys_get_temp_dir() . '/talos-restore-' . uniqid();
+        mkdir($extractDir, 0755, true);
+
+        try {
+            if (! $zip->extractTo($extractDir)) {
+                $zip->close();
+                throw new \RuntimeException('Failed to extract backup archive.');
+            }
+            $zip->close();
+
+            // Restore database
+            $dbPath      = config('database.connections.sqlite.database');
+            $extractedDb = $extractDir . '/database/talos.sqlite';
+            if (! $dbPath) {
+                throw new \RuntimeException('SQLite database path is not configured.');
+            }
+            if (! file_exists($extractedDb)) {
+                throw new \RuntimeException('Extracted backup is missing database/talos.sqlite.');
+            }
+            if (file_exists($dbPath)) {
+                copy($dbPath, $dbPath . '.pre-restore');
+            }
+            if (! copy($extractedDb, $dbPath)) {
+                throw new \RuntimeException("Failed to write restored database to: {$dbPath}");
+            }
+            // Remove WAL sidecar files so SQLite doesn't replay current-session
+            // transactions over the just-restored database on the next open.
+            @unlink($dbPath . '-wal');
+            @unlink($dbPath . '-shm');
+
+            // Restore schemas
+            $schemaBase    = config('talos.schema_path', base_path('talos'));
+            $schemaExtract = $extractDir . '/schemas';
+            if (is_dir($schemaExtract) && is_dir($schemaBase)) {
+                File::cleanDirectory($schemaBase);
+                File::copyDirectory($schemaExtract, $schemaBase);
+            }
+
+            // Restore local media — $relative already carries the full disk-relative path
+            // (e.g. talos/media/foo.jpg) so no extra prefix is needed
+            $mediaExtract = $extractDir . '/media';
+            if (is_dir($mediaExtract) && ! $this->storage->isR2MediaEnabled()) {
+                $localDisk = Storage::disk('public');
+                foreach (File::allFiles($mediaExtract) as $file) {
+                    $relative = ltrim(str_replace($mediaExtract, '', $file->getPathname()), '/\\');
+                    $localDisk->put($relative, file_get_contents($file->getPathname()));
+                }
+            }
+
+            Artisan::call('optimize');
+        } finally {
+            File::deleteDirectory($extractDir);
+        }
     }
 }

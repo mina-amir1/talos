@@ -115,6 +115,11 @@ class StorageSettings
         return true;
     }
 
+    public function makeDiskWith(string $accountId, string $accessKey, string $secretKey, string $bucket): Filesystem
+    {
+        return $this->buildR2Disk($accountId, $accessKey, $secretKey, $bucket);
+    }
+
     private function buildR2Disk(string $accountId, string $accessKey, string $secretKey, string $bucket): Filesystem
     {
         return Storage::build([

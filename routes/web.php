@@ -112,6 +112,8 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::post('backup/trigger',             [StorageSettingsController::class, 'triggerBackup'])->name('backup.trigger');
             Route::get('backup/download',             [StorageSettingsController::class, 'downloadBackup'])->name('backup.download');
             Route::delete('backup',                   [StorageSettingsController::class, 'deleteBackup'])->name('backup.delete');
+            Route::post('backup/restore',             [StorageSettingsController::class, 'restoreBackup'])->name('backup.restore');
+            Route::post('backup/restore-upload',      [StorageSettingsController::class, 'uploadRestoreBackup'])->name('backup.restore-upload');
         });
     });
 });

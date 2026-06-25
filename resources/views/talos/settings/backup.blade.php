@@ -117,7 +117,24 @@
                 </button>
             </div>
         </div>
-        <p id="backup-result" class="text-xs mt-3 hidden"></p>
+    </div>
+
+    {{-- Restore from upload --}}
+    <div class="bg-white border border-slate-200 rounded-xl p-6">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-800">Restore from File</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Upload a Talos backup zip to restore the database, schemas, and local media. Current state is preserved as <span class="font-mono">.pre-restore</span> before overwriting.</p>
+            </div>
+            <button type="button" id="btn-upload-restore"
+                    class="shrink-0 px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium rounded-lg hover:bg-amber-100 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Upload & Restore
+            </button>
+            <input type="file" id="upload-restore-input" accept=".zip" class="hidden">
+        </div>
     </div>
 
     {{-- Backup history --}}
@@ -142,10 +159,16 @@
                     <td class="px-5 py-3 text-slate-500">{{ number_format($b['size'] / 1024, 1) }} KB</td>
                     <td class="px-5 py-3 text-slate-500">{{ $b['modified'] }}</td>
                     <td class="px-5 py-3 text-right">
-                        <button data-key="{{ $b['key'] }}" data-name="{{ $b['name'] }}"
-                                class="btn-delete-backup text-xs text-red-500 hover:text-red-700">
-                            Delete
-                        </button>
+                        <div class="flex items-center justify-end gap-4">
+                            <button data-key="{{ $b['key'] }}" data-name="{{ $b['name'] }}"
+                                    class="btn-restore-backup text-xs text-blue-500 hover:text-blue-700">
+                                Restore
+                            </button>
+                            <button data-key="{{ $b['key'] }}" data-name="{{ $b['name'] }}"
+                                    class="btn-delete-backup text-xs text-red-500 hover:text-red-700">
+                                Delete
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 @endforeach
@@ -158,7 +181,7 @@
 
 <script>
 (function () {
-    // Test
+    // Test connection
     document.getElementById('btn-test-backup')?.addEventListener('click', async function () {
         this.textContent = 'Testing…';
         try {
@@ -176,13 +199,20 @@
                 }),
             });
             const data = await res.json();
-            if (data.ok) talos.toast('Connection successful!', 'success');
-            else talos.toast('Connection failed: ' + (data.error ?? 'Check credentials.'), 'error');
+            if (data.ok) {
+                const count = data.existing ?? 0;
+                const suffix = count === 0
+                    ? 'No existing backups in bucket.'
+                    : `Found ${count} existing backup file${count === 1 ? '' : 's'} in bucket.`;
+                talos.toast('Connection successful! ' + suffix, 'success');
+            } else {
+                talos.toast('Connection failed: ' + (data.error ?? 'Check credentials.'), 'error');
+            }
         } catch { talos.toast('Request failed.', 'error'); }
         this.textContent = 'Test Connection';
     });
 
-    // Trigger
+    // Run now
     document.getElementById('btn-trigger-backup')?.addEventListener('click', async function () {
         if (!await talos.confirm('Run a backup now?', { confirmLabel: 'Run Backup', danger: false })) return;
         this.disabled = true;
@@ -200,6 +230,35 @@
         this.textContent = 'Run Now';
     });
 
+    // Restore from R2
+    document.querySelectorAll('.btn-restore-backup').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const confirmed = await talos.confirm(
+                'Restore from "' + this.dataset.name + '"?\n\nThis will replace your current database and schema files. Your existing database will be saved as a .pre-restore file first.',
+                { confirmLabel: 'Restore', danger: true }
+            );
+            if (!confirmed) return;
+
+            const original = this.textContent;
+            this.textContent = 'Restoring…';
+            this.disabled = true;
+
+            try {
+                const res = await fetch('{{ route('talos.settings.backup.restore') }}', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    body:    JSON.stringify({ key: this.dataset.key }),
+                });
+                const data = await res.json();
+                if (data.restored) talos.toast('Restored successfully!', 'success');
+                else talos.toast('Restore failed: ' + (data.error ?? 'Unknown error.'), 'error');
+            } catch { talos.toast('Request failed.', 'error'); }
+
+            this.textContent = original;
+            this.disabled = false;
+        });
+    });
+
     // Delete backups
     document.querySelectorAll('.btn-delete-backup').forEach(btn => {
         btn.addEventListener('click', async function () {
@@ -215,6 +274,44 @@
                 else talos.toast('Delete failed.', 'error');
             } catch { talos.toast('Request failed.', 'error'); }
         });
+    });
+
+    // Upload & Restore
+    document.getElementById('btn-upload-restore')?.addEventListener('click', function () {
+        document.getElementById('upload-restore-input').click();
+    });
+
+    document.getElementById('upload-restore-input')?.addEventListener('change', async function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        const confirmed = await talos.confirm(
+            'Restore from "' + file.name + '"?\n\nThis will replace your current database and schema files. Your existing database will be saved as a .pre-restore file first.',
+            { confirmLabel: 'Restore', danger: true }
+        );
+        if (!confirmed) { this.value = ''; return; }
+
+        const btn = document.getElementById('btn-upload-restore');
+        btn.textContent = 'Uploading…';
+        btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('_token', '{{ csrf_token() }}');
+
+        try {
+            const res = await fetch('{{ route('talos.settings.backup.restore-upload') }}', {
+                method: 'POST',
+                body:   formData,
+            });
+            const data = await res.json();
+            if (data.restored) talos.toast('Restored successfully!', 'success');
+            else talos.toast('Restore failed: ' + (data.error ?? 'Unknown error.'), 'error');
+        } catch { talos.toast('Request failed.', 'error'); }
+
+        btn.textContent = 'Upload & Restore';
+        btn.disabled = false;
+        this.value = '';
     });
 })();
 </script>

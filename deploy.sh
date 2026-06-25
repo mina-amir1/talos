@@ -589,7 +589,7 @@ fi
 # Verify required extensions
 start_spinner "Verifying PHP extensions"
 MISSING_EXTS=()
-for ext in pdo pdo_sqlite sqlite3 mbstring xml ctype json bcmath fileinfo curl tokenizer; do
+for ext in pdo pdo_sqlite sqlite3 mbstring xml ctype json bcmath fileinfo curl tokenizer zip; do
     php_ext_ok "$PHP_VER" "$ext" 2>/dev/null || MISSING_EXTS+=("$ext")
 done
 stop_spinner

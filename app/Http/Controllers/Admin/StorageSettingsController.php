@@ -183,10 +183,39 @@ class StorageSettingsController extends Controller
         }
 
         try {
-            $this->storage->testBackupConnectionWith($accountId, $accessKey, $secretKey, $bucket);
-            return response()->json(['ok' => true]);
+            $disk     = $this->storage->makeDiskWith($accountId, $accessKey, $secretKey, $bucket);
+            $disk->put('.talos-probe', 'ok');
+            $disk->delete('.talos-probe');
+            $existing = count($disk->files('backups'));
+            return response()->json(['ok' => true, 'existing' => $existing]);
         } catch (\Throwable $e) {
             return response()->json(['ok' => false, 'error' => $this->friendlyConnectionError($e)]);
+        }
+    }
+
+    public function restoreBackup(Request $request)
+    {
+        $this->requireSuperAdmin($request);
+        $request->validate(['key' => 'required|string']);
+
+        try {
+            $this->backup->restore($request->input('key'));
+            return response()->json(['restored' => true]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function uploadRestoreBackup(Request $request)
+    {
+        $this->requireSuperAdmin($request);
+        $request->validate(['file' => 'required|file|extensions:zip']);
+
+        try {
+            $this->backup->restoreFromUpload($request->file('file')->getRealPath());
+            return response()->json(['restored' => true]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 

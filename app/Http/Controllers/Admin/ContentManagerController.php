@@ -345,12 +345,12 @@ class ContentManagerController extends Controller
 
             $data[$name] = match ($field['type']) {
                 'boolean'    => $request->boolean($name),
-                'json', 'component', 'dynamiczone', 'repeater' => is_string($value) ? json_decode($value, true) : $value,
+                'json', 'component', 'dynamiczone', 'repeater' => (is_string($value) && $value !== '') ? json_decode($value, true) : null,
                 default      => $value,
             };
         }
 
-        return array_filter($data, fn($v) => $v !== null);
+        return $data;
     }
 
     private function loadRelationOptions(array $attributes): array
