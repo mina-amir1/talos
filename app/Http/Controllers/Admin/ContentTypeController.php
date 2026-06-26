@@ -72,6 +72,33 @@ class ContentTypeController extends Controller
         }
     }
 
+    public function apiSettings(string $uid)
+    {
+        $contentType = $this->service->find($uid);
+
+        if (! $contentType) {
+            abort(404);
+        }
+
+        $apiFields = $contentType['apiFields'] ?? null;
+
+        return view('talos.content-type-builder.api-settings', compact('contentType', 'uid', 'apiFields'));
+    }
+
+    public function saveApiSettings(Request $request, string $uid)
+    {
+        $contentType = $this->service->find($uid);
+
+        if (! $contentType) {
+            abort(404);
+        }
+
+        $fields = $request->has('fields') ? array_values($request->input('fields')) : null;
+        $this->service->saveApiFields($uid, $fields);
+
+        return back()->with('success', 'API field settings saved.');
+    }
+
     public function destroy(string $uid)
     {
         try {

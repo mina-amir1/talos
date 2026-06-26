@@ -33,6 +33,8 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::get('/',         [ContentTypeController::class, 'index'])->name('index');
             Route::get('/create',   [ContentTypeController::class, 'create'])->name('create');
             Route::post('/',        [ContentTypeController::class, 'store'])->name('store');
+            Route::get('/{uid}/api',  [ContentTypeController::class, 'apiSettings'])->name('api-settings');
+            Route::put('/{uid}/api',  [ContentTypeController::class, 'saveApiSettings'])->name('api-settings.save');
             Route::get('/{uid}',    [ContentTypeController::class, 'edit'])->name('edit');
             Route::put('/{uid}',    [ContentTypeController::class, 'update'])->name('update');
             Route::delete('/{uid}', [ContentTypeController::class, 'destroy'])->name('destroy');

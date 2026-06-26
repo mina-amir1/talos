@@ -85,10 +85,40 @@ class ContentTypeService
         $schema = array_merge($existing, $data);
         unset($schema['__uid']);
 
+        // Auto-enable fields that are genuinely new (not just unchecked)
+        if (isset($schema['apiFields'])) {
+            $previousFields = array_flip(array_keys($existing['attributes'] ?? []));
+            $known          = array_flip($schema['apiFields']);
+            foreach (array_keys($schema['attributes'] ?? []) as $field) {
+                if (! isset($known[$field]) && ! isset($previousFields[$field])) {
+                    $schema['apiFields'][] = $field;
+                }
+            }
+        }
+
         $this->save($uid, $schema);
         app(SchemaGeneratorService::class)->sync($schema, $uid, $renames);
 
         return $schema;
+    }
+
+    public function saveApiFields(string $uid, ?array $fields): void
+    {
+        $schema = $this->find($uid);
+
+        if (! $schema) {
+            abort(404, "Content type [{$uid}] not found.");
+        }
+
+        unset($schema['__uid']);
+
+        if ($fields === null) {
+            unset($schema['apiFields']);
+        } else {
+            $schema['apiFields'] = array_values($fields);
+        }
+
+        $this->save($uid, $schema);
     }
 
     public function delete(string $uid): void

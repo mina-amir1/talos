@@ -52,6 +52,7 @@ class ContentApiController extends Controller
             }
 
             $data = $this->processEntries([$entry->toArray()], $contentType['attributes'] ?? [], $locale)[0];
+            $data = $this->applyApiFields($data, $contentType['apiFields'] ?? null);
 
             return response()->json(['data' => $data]);
         }
@@ -90,6 +91,7 @@ class ContentApiController extends Controller
             $contentType['attributes'] ?? [],
             $locale
         );
+        $items = array_map(fn($item) => $this->applyApiFields($item, $contentType['apiFields'] ?? null), $items);
 
         return response()->json([
             'data' => $items,
@@ -138,6 +140,7 @@ class ContentApiController extends Controller
         }
 
         $data = $this->processEntries([$entry->toArray()], $contentType['attributes'] ?? [], $locale)[0];
+        $data = $this->applyApiFields($data, $contentType['apiFields'] ?? null);
 
         return response()->json(['data' => $data]);
     }
@@ -253,6 +256,20 @@ class ContentApiController extends Controller
         return response()->json(['data' => null], 200);
     }
 
+    private function applyApiFields(array $entry, ?array $apiFields): array
+    {
+        if ($apiFields === null) {
+            return $entry;
+        }
+
+        $keep = array_flip(array_merge(
+            ['id', 'slug', 'locale', 'localizations_id', 'published_at', 'created_at', 'updated_at'],
+            $apiFields
+        ));
+
+        return array_intersect_key($entry, $keep);
+    }
+
     private function processEntries(array $entries, array $attributes, string $locale = null): array
     {
         $locale  ??= config('talos.default_locale');
@@ -355,7 +372,8 @@ class ContentApiController extends Controller
             'created_by', 'updated_by', 'published_at', 'created_at', 'updated_at',
         ];
 
-        $allowed = array_flip(array_merge($systemKeys, array_keys($attributes)));
+        $publicAttributes = array_keys(array_filter($attributes, fn($def) => ! ($def['private'] ?? false)));
+        $allowed          = array_flip(array_merge($systemKeys, $publicAttributes));
 
         return array_map(fn($entry) => array_intersect_key($entry, $allowed), $entries);
     }

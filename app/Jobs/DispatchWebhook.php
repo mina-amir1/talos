@@ -6,6 +6,7 @@ use App\Models\TalosWebhook;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class DispatchWebhook implements ShouldQueue
 {
@@ -40,15 +41,31 @@ class DispatchWebhook implements ShouldQueue
             $signature = hash_hmac('sha256', $body, $webhook->secret ?? '');
 
             try {
-                Http::timeout(10)
+                $response = Http::timeout(10)
                     ->withHeaders([
                         'Content-Type'        => 'application/json',
                         'X-Talos-Event'       => $this->event,
                         'X-Talos-Signature'   => 'sha256=' . $signature,
                     ])
                     ->post($webhook->url, json_decode($body, true));
-            } catch (\Throwable) {
-                // One failing webhook must not prevent others from firing
+
+                if ($response->failed()) {
+                    Log::warning('Webhook delivery failed', [
+                        'webhook_id'   => $webhook->id,
+                        'webhook_name' => $webhook->name,
+                        'url'          => $webhook->url,
+                        'event'        => $this->event,
+                        'status'       => $response->status(),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Webhook delivery error', [
+                    'webhook_id'   => $webhook->id,
+                    'webhook_name' => $webhook->name,
+                    'url'          => $webhook->url,
+                    'event'        => $this->event,
+                    'error'        => $e->getMessage(),
+                ]);
             }
         }
     }

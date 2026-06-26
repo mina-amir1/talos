@@ -10,6 +10,17 @@
 @section('title', $title . ' — ' . $contentType['info']['displayName'])
 @section('header', $contentType['info']['displayName'] . ' — ' . ($isEdit ? 'Edit' : 'Create'))
 
+@section('header-actions')
+    <a href="{{ route('talos.content-type-builder.api-settings', ['uid' => $uid]) }}"
+       class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-sm transition-colors flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        API Fields
+    </a>
+@endsection
+
 @push('styles')
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <style>

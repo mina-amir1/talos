@@ -50,11 +50,15 @@
                         <p class="text-slate-400 text-xs mt-2">{{ count($type['attributes'] ?? []) }} field(s)</p>
                         <div class="flex gap-2 mt-4">
                             <a href="{{ route('talos.content-type-builder.edit', ['uid' => $type['__uid']]) }}"
-                               class="flex-1 text-center py-1.5 bg-slate-100 hover:bg-slate-100 text-slate-600 rounded text-xs font-medium transition-colors">
+                               class="flex-1 text-center py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
                                 Edit Schema
                             </a>
+                            <a href="{{ route('talos.content-type-builder.api-settings', ['uid' => $type['__uid']]) }}"
+                               class="flex-1 text-center py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium transition-colors">
+                                API Fields
+                            </a>
                             <a href="{{ route('talos.content.index', ['uid' => $type['__uid']]) }}"
-                               class="flex-1 text-center py-1.5 bg-blue-50 hover:bg-blue-900/60 text-blue-600 rounded text-xs font-medium transition-colors">
+                               class="flex-1 text-center py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded text-xs font-medium transition-colors">
                                 Manage Content
                             </a>
                         </div>
@@ -100,8 +104,12 @@
                         <p class="text-slate-400 text-xs mt-0.5">{{ $type['info']['singularName'] }}</p>
                         <div class="flex gap-2 mt-4">
                             <a href="{{ route('talos.content-type-builder.edit', ['uid' => $type['__uid']]) }}"
-                               class="flex-1 text-center py-1.5 bg-slate-100 hover:bg-slate-100 text-slate-600 rounded text-xs font-medium">
+                               class="flex-1 text-center py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium">
                                 Edit Schema
+                            </a>
+                            <a href="{{ route('talos.content-type-builder.api-settings', ['uid' => $type['__uid']]) }}"
+                               class="flex-1 text-center py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium">
+                                API Fields
                             </a>
                         </div>
                     </div>
