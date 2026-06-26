@@ -133,4 +133,34 @@ class StorageSettings
             'throw'                   => true,
         ]);
     }
+
+    public function friendlyConnectionError(\Throwable $e): string
+    {
+        $msg = $e->getMessage();
+
+        return match (true) {
+            str_contains($msg, 'Could not resolve host'),
+            str_contains($msg, 'cURL error 6')    => 'Could not reach the storage server. Your Account ID is likely incorrect.',
+
+            str_contains($msg, 'TLS'),
+            str_contains($msg, 'SSL'),
+            str_contains($msg, 'handshake'),
+            str_contains($msg, 'cURL error 35')   => 'Secure connection failed. Your Account ID is likely incorrect.',
+
+            str_contains($msg, 'timed out'),
+            str_contains($msg, 'cURL error 28')   => 'Connection timed out. Check your Account ID and try again.',
+
+            str_contains($msg, 'InvalidAccessKeyId')   => 'Access Key ID not recognised. Double-check your Access Key ID.',
+            str_contains($msg, 'SignatureDoesNotMatch') => 'Secret Access Key is incorrect. Please re-enter it.',
+            str_contains($msg, 'NoSuchBucket')         => 'Bucket not found. Make sure the bucket name is correct and the bucket exists.',
+
+            str_contains($msg, 'AccessDenied'),
+            str_contains($msg, '403 Forbidden')   => 'Access denied. Your credentials do not have permission to access this bucket.',
+
+            str_contains($msg, 'NoSuchKey'),
+            str_contains($msg, '404')             => 'Bucket or resource not found. Check the bucket name.',
+
+            default => 'Could not connect. Please check all credentials and try again.',
+        };
+    }
 }

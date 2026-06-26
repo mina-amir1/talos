@@ -102,6 +102,48 @@ class ContentTypeService
         return $schema;
     }
 
+    public function resolveByName(string $name): ?array
+    {
+        foreach ($this->all() as $type) {
+            $isSingle    = ($type['kind'] ?? 'collectionType') === 'singleType';
+            $nameToMatch = $isSingle
+                ? ($type['info']['singularName'] ?? '')
+                : ($type['info']['pluralName'] ?? '');
+
+            if ($nameToMatch === $name) {
+                return $type;
+            }
+        }
+
+        return null;
+    }
+
+    public function buildValidationRules(array $attributes): array
+    {
+        $rules = [];
+
+        foreach ($attributes as $name => $field) {
+            $rule   = [];
+            $rule[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+            $rule[] = match ($field['type'] ?? 'string') {
+                'string', 'text', 'richtext', 'uid', 'url' => 'string',
+                'email'                => 'email',
+                'integer', 'biginteger' => 'integer',
+                'decimal', 'float'     => 'numeric',
+                'boolean'              => 'boolean',
+                'date', 'datetime'     => 'date',
+                default                => 'string',
+            };
+
+            if (isset($field['maxLength'])) $rule[] = 'max:' . $field['maxLength'];
+            if (isset($field['min']))        $rule[] = 'min:' . $field['min'];
+
+            $rules[$name] = implode('|', $rule);
+        }
+
+        return $rules;
+    }
+
     public function saveApiFields(string $uid, ?array $fields): void
     {
         $schema = $this->find($uid);

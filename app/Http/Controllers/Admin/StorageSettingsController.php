@@ -13,22 +13,22 @@ class StorageSettingsController extends Controller
 {
     public function __construct(
         private StorageSettings $storage,
-        private BackupService $backup,
+        private BackupService   $backup,
     ) {}
 
     // ── Storage ───────────────────────────────────────────────────────────────
 
-    public function storage(Request $request)
+    public function storage()
     {
-$config = [
-            'r2_media_enabled'    => TalosSettings::get('r2_media_enabled', '0'),
-            'r2_media_account_id' => TalosSettings::get('r2_media_account_id', ''),
-            'r2_media_access_key' => TalosSettings::get('r2_media_access_key', ''),
-            'r2_media_bucket'     => TalosSettings::get('r2_media_bucket', ''),
-            'r2_media_domain'     => TalosSettings::get('r2_media_domain', ''),
-            'r2_migration_status' => TalosSettings::get('r2_migration_status', 'idle'),
+        $config = [
+            'r2_media_enabled'      => TalosSettings::get('r2_media_enabled', '0'),
+            'r2_media_account_id'   => TalosSettings::get('r2_media_account_id', ''),
+            'r2_media_access_key'   => TalosSettings::get('r2_media_access_key', ''),
+            'r2_media_bucket'       => TalosSettings::get('r2_media_bucket', ''),
+            'r2_media_domain'       => TalosSettings::get('r2_media_domain', ''),
+            'r2_migration_status'   => TalosSettings::get('r2_migration_status', 'idle'),
             'r2_migration_progress' => TalosSettings::get('r2_migration_progress', '0/0'),
-            'r2_migration_failed' => TalosSettings::get('r2_migration_failed', '0'),
+            'r2_migration_failed'   => TalosSettings::get('r2_migration_failed', '0'),
         ];
 
         return view('talos.settings.storage', compact('config'));
@@ -36,7 +36,7 @@ $config = [
 
     public function saveStorage(Request $request)
     {
-$request->validate([
+        $request->validate([
             'r2_media_account_id' => 'required|string',
             'r2_media_access_key' => 'required|string',
             'r2_media_bucket'     => 'required|string',
@@ -59,7 +59,7 @@ $request->validate([
 
     public function toggleStorage(Request $request)
     {
-$enable = $request->boolean('enabled');
+        $enable = $request->boolean('enabled');
 
         if ($enable && ! $this->storage->isR2MediaConfigured()) {
             return response()->json(['error' => 'Save R2 credentials first.'], 422);
@@ -72,27 +72,27 @@ $enable = $request->boolean('enabled');
 
     public function testStorage(Request $request)
     {
-try {
+        try {
             $ok = $this->storage->testMediaConnectionWith(
                 $request->input('r2_media_account_id') ?: TalosSettings::get('r2_media_account_id'),
-                $request->input('r2_media_access_key')  ?: TalosSettings::get('r2_media_access_key'),
-                $request->input('r2_media_secret_key')  ?: TalosSettings::get('r2_media_secret_key'),
-                $request->input('r2_media_bucket')      ?: TalosSettings::get('r2_media_bucket'),
+                $request->input('r2_media_access_key') ?: TalosSettings::get('r2_media_access_key'),
+                $request->input('r2_media_secret_key') ?: TalosSettings::get('r2_media_secret_key'),
+                $request->input('r2_media_bucket')     ?: TalosSettings::get('r2_media_bucket'),
             );
+
             return response()->json(['ok' => $ok]);
         } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'error' => $this->friendlyConnectionError($e)]);
+            return response()->json(['ok' => false, 'error' => $this->storage->friendlyConnectionError($e)]);
         }
     }
 
-    public function startMigration(Request $request)
+    public function startMigration()
     {
-if (! $this->storage->isR2MediaConfigured()) {
+        if (! $this->storage->isR2MediaConfigured()) {
             return response()->json(['error' => 'Configure R2 credentials first.'], 422);
         }
 
-        $status = TalosSettings::get('r2_migration_status', 'idle');
-        if ($status === 'running') {
+        if (TalosSettings::get('r2_migration_status') === 'running') {
             return response()->json(['error' => 'Migration already running.'], 422);
         }
 
@@ -114,9 +114,9 @@ if (! $this->storage->isR2MediaConfigured()) {
 
     // ── Backup ────────────────────────────────────────────────────────────────
 
-    public function backup(Request $request)
+    public function backup()
     {
-$config = [
+        $config = [
             'r2_backup_account_id' => TalosSettings::get('r2_backup_account_id', ''),
             'r2_backup_access_key' => TalosSettings::get('r2_backup_access_key', ''),
             'r2_backup_bucket'     => TalosSettings::get('r2_backup_bucket', ''),
@@ -132,7 +132,7 @@ $config = [
 
     public function saveBackup(Request $request)
     {
-$request->validate([
+        $request->validate([
             'r2_backup_account_id' => 'required|string',
             'r2_backup_access_key' => 'required|string',
             'r2_backup_bucket'     => 'required|string',
@@ -157,7 +157,7 @@ $request->validate([
 
     public function testBackup(Request $request)
     {
-$accountId = $request->input('r2_backup_account_id') ?: TalosSettings::get('r2_backup_account_id', '');
+        $accountId = $request->input('r2_backup_account_id') ?: TalosSettings::get('r2_backup_account_id', '');
         $accessKey = $request->input('r2_backup_access_key') ?: TalosSettings::get('r2_backup_access_key', '');
         $secretKey = $request->input('r2_backup_secret_key') ?: TalosSettings::get('r2_backup_secret_key', '');
         $bucket    = $request->input('r2_backup_bucket')     ?: TalosSettings::get('r2_backup_bucket', '');
@@ -171,9 +171,10 @@ $accountId = $request->input('r2_backup_account_id') ?: TalosSettings::get('r2_b
             $disk->put('.talos-probe', 'ok');
             $disk->delete('.talos-probe');
             $existing = count($disk->files('backups'));
+
             return response()->json(['ok' => true, 'existing' => $existing]);
         } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'error' => $this->friendlyConnectionError($e)]);
+            return response()->json(['ok' => false, 'error' => $this->storage->friendlyConnectionError($e)]);
         }
     }
 
@@ -201,7 +202,7 @@ $accountId = $request->input('r2_backup_account_id') ?: TalosSettings::get('r2_b
         }
     }
 
-    public function triggerBackup(Request $request)
+    public function triggerBackup()
     {
         try {
             $key = $this->backup->run();
@@ -211,7 +212,7 @@ $accountId = $request->input('r2_backup_account_id') ?: TalosSettings::get('r2_b
         }
     }
 
-    public function downloadBackup(Request $request)
+    public function downloadBackup()
     {
         ['path' => $path, 'name' => $name] = $this->backup->createZip();
 
@@ -222,47 +223,7 @@ $accountId = $request->input('r2_backup_account_id') ?: TalosSettings::get('r2_b
     {
         $request->validate(['key' => 'required|string']);
         $this->backup->delete($request->input('key'));
+
         return response()->json(['deleted' => true]);
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private function friendlyConnectionError(\Throwable $e): string
-    {
-        $msg = $e->getMessage();
-
-        if (str_contains($msg, 'Could not resolve host') || str_contains($msg, 'cURL error 6')) {
-            return 'Could not reach the storage server. Your Account ID is likely incorrect.';
-        }
-
-        if (str_contains($msg, 'TLS') || str_contains($msg, 'SSL') || str_contains($msg, 'handshake') || str_contains($msg, 'cURL error 35')) {
-            return 'Secure connection failed. Your Account ID is likely incorrect.';
-        }
-
-        if (str_contains($msg, 'timed out') || str_contains($msg, 'cURL error 28')) {
-            return 'Connection timed out. Check your Account ID and try again.';
-        }
-
-        if (str_contains($msg, 'InvalidAccessKeyId')) {
-            return 'Access Key ID not recognised. Double-check your Access Key ID.';
-        }
-
-        if (str_contains($msg, 'SignatureDoesNotMatch')) {
-            return 'Secret Access Key is incorrect. Please re-enter it.';
-        }
-
-        if (str_contains($msg, 'NoSuchBucket')) {
-            return 'Bucket not found. Make sure the bucket name is correct and the bucket exists.';
-        }
-
-        if (str_contains($msg, 'AccessDenied') || str_contains($msg, '403 Forbidden')) {
-            return 'Access denied. Your credentials do not have permission to access this bucket.';
-        }
-
-        if (str_contains($msg, 'NoSuchKey') || str_contains($msg, '404')) {
-            return 'Bucket or resource not found. Check the bucket name.';
-        }
-
-        return 'Could not connect. Please check all credentials and try again.';
     }
 }
