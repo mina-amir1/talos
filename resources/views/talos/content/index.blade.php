@@ -51,10 +51,60 @@
 
     $displayCols = collect($attributes)->filter(fn($f) => in_array($f['type'], ['string','text','email','uid','integer','boolean','enumeration']))->take(4)->keys()->toArray();
     $multiPage   = $entries->hasPages();
+    $pageIds     = $entries->pluck('id')->toArray();
 @endphp
 
 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden"
-     @if($manualOrder) x-data="manualOrderList('{{ $uid }}', {{ $entries->currentPage() }}, {{ $entries->perPage() }})" @endif>
+     x-data="tableManager('{{ $uid }}', {{ $entries->currentPage() }}, {{ $entries->perPage() }}, {{ $manualOrder ? 'true' : 'false' }}, {{ json_encode($pageIds) }})">
+
+    {{-- Bulk actions bar --}}
+    <div x-show="selected.length > 0" x-cloak
+         class="px-5 py-3 bg-blue-50 border-b border-blue-200 flex items-center gap-3 flex-wrap">
+        <span class="text-sm font-medium text-blue-700" x-text="selected.length + ' ' + (selected.length === 1 ? 'entry' : 'entries') + ' selected'"></span>
+
+        @if($draftable)
+            {{-- Bulk Publish --}}
+            <form action="{{ route('talos.content.bulk-publish', ['uid' => $uid]) }}"
+                  method="POST"
+                  :data-confirm="'Publish ' + selected.length + ' ' + (selected.length === 1 ? 'entry' : 'entries') + '?'">
+                @csrf
+                <input type="hidden" name="ids" x-bind:value="JSON.stringify(selected)">
+                <button type="submit"
+                        class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors">
+                    Publish selected
+                </button>
+            </form>
+
+            {{-- Bulk Unpublish --}}
+            <form action="{{ route('talos.content.bulk-unpublish', ['uid' => $uid]) }}"
+                  method="POST"
+                  :data-confirm="'Unpublish ' + selected.length + ' ' + (selected.length === 1 ? 'entry' : 'entries') + '?'">
+                @csrf
+                <input type="hidden" name="ids" x-bind:value="JSON.stringify(selected)">
+                <button type="submit"
+                        class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-white text-xs font-medium rounded-lg transition-colors">
+                    Unpublish selected
+                </button>
+            </form>
+        @endif
+
+        {{-- Bulk Delete --}}
+        <form action="{{ route('talos.content.bulk-destroy', ['uid' => $uid]) }}"
+              method="POST"
+              :data-confirm="'Permanently delete ' + selected.length + ' ' + (selected.length === 1 ? 'entry' : 'entries') + '? This cannot be undone.'">
+            @csrf
+            <input type="hidden" name="ids" x-bind:value="JSON.stringify(selected)">
+            <button type="submit"
+                    class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded-lg transition-colors">
+                Delete selected
+            </button>
+        </form>
+
+        <button type="button" @click="clearAll()"
+                class="ml-auto text-xs text-blue-500 hover:text-blue-700 transition-colors">
+            Clear selection
+        </button>
+    </div>
 
     {{-- Table header --}}
     <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between gap-4">
@@ -95,6 +145,15 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-slate-200">
+                        {{-- Select-all checkbox --}}
+                        <th class="w-10 px-4 py-3" data-no-dirty>
+                            <input type="checkbox"
+                                   x-ref="headerCheck"
+                                   :checked="allSelected"
+                                   x-effect="$refs.headerCheck.indeterminate = someSelected"
+                                   @change="toggleAll()"
+                                   class="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer accent-blue-600">
+                        </th>
                         @if($manualOrder)
                             <th class="w-8 px-3 py-3"></th>{{-- drag handle --}}
                             @if($multiPage)
@@ -117,13 +176,24 @@
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200" @if($manualOrder) x-ref="tbody" data-no-dirty @endif>
+                <tbody class="divide-y divide-slate-200" x-ref="tbody" @if($manualOrder) data-no-dirty @endif>
                     @foreach($entries as $entry)
                         @php
                             /* @var \stdClass $loop */
                             $rowPos = ($entries->currentPage() - 1) * $entries->perPage() + $loop->index + 1;
                         @endphp
-                        <tr class="hover:bg-slate-100 transition-colors" @if($manualOrder) data-id="{{ $entry->id }}" @endif>
+                        <tr class="hover:bg-slate-50 transition-colors"
+                            :class="isSelected({{ $entry->id }}) ? 'bg-blue-50' : ''"
+                            @if($manualOrder) data-id="{{ $entry->id }}" @endif>
+
+                            {{-- Row checkbox --}}
+                            <td class="px-4 py-3" data-no-dirty>
+                                <input type="checkbox"
+                                       :checked="isSelected({{ $entry->id }})"
+                                       @change="toggle({{ $entry->id }})"
+                                       class="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer accent-blue-600">
+                            </td>
+
                             @if($manualOrder)
                                 <td class="px-3 py-3 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing sort-handle" title="Drag to reorder">
                                     <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
@@ -147,6 +217,7 @@
                                 </td>
                                 @endif
                             @endif
+
                             <td class="px-4 py-3 text-slate-400 text-xs font-mono">{{ $entry->id }}</td>
                             @foreach($displayCols as $col)
                                 <td class="px-4 py-3 text-slate-600">
@@ -180,20 +251,34 @@
                             @endif
                             <td class="px-4 py-3 text-slate-400 text-xs">{{ \Carbon\Carbon::parse($entry->created_at)->diffForHumans() }}</td>
                             <td class="px-4 py-3">
-                                <div class="flex items-center gap-2 justify-end">
+                                <div class="flex items-center gap-1 justify-end">
                                     @if($draftable)
                                         @if($entry->published_at)
                                             <form action="{{ route('talos.content.unpublish', ['uid' => $uid, 'id' => $entry->id]) }}" method="POST">
                                                 @csrf
-                                                <button type="submit" class="text-xs text-amber-600 hover:text-amber-600">Unpublish</button>
+                                                <button type="submit" class="text-xs text-amber-600 hover:text-amber-700 px-1 py-1">Unpublish</button>
                                             </form>
                                         @else
                                             <form action="{{ route('talos.content.publish', ['uid' => $uid, 'id' => $entry->id]) }}" method="POST">
                                                 @csrf
-                                                <button type="submit" class="text-xs text-emerald-600 hover:text-emerald-700">Publish</button>
+                                                <button type="submit" class="text-xs text-emerald-600 hover:text-emerald-700 px-1 py-1">Publish</button>
                                             </form>
                                         @endif
                                     @endif
+
+                                    {{-- Duplicate --}}
+                                    <form action="{{ route('talos.content.duplicate', ['uid' => $uid, 'id' => $entry->id]) }}" method="POST"
+                                          title="Duplicate entry">
+                                        @csrf
+                                        <button type="submit" class="text-slate-400 hover:text-violet-600 transition-colors p-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+
+                                    {{-- Edit --}}
                                     <a href="{{ route('talos.content.edit', ['uid' => $uid, 'id' => $entry->id]) }}"
                                        class="text-slate-400 hover:text-blue-600 transition-colors p-1">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,6 +286,8 @@
                                                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                         </svg>
                                     </a>
+
+                                    {{-- Delete --}}
                                     <form action="{{ route('talos.content.destroy', ['uid' => $uid, 'id' => $entry->id]) }}"
                                           method="POST" data-confirm="Delete this entry?">
                                         @csrf @method('DELETE')
@@ -227,17 +314,47 @@
     @endif
 </div>
 
-@if($manualOrder)
 <script>
-function manualOrderList(uid, page, perPage) {
+function tableManager(uid, page, perPage, manualOrder, pageIds) {
     return {
+        // ── Bulk selection ────────────────────────────────────────────────────
+        pageIds:  pageIds || [],
+        selected: [],
+
+        toggle(id) {
+            const i = this.selected.indexOf(id);
+            i === -1 ? this.selected.push(id) : this.selected.splice(i, 1);
+        },
+
+        isSelected(id) {
+            return this.selected.includes(id);
+        },
+
+        get allSelected() {
+            return this.pageIds.length > 0 && this.selected.length === this.pageIds.length;
+        },
+
+        get someSelected() {
+            return this.selected.length > 0 && this.selected.length < this.pageIds.length;
+        },
+
+        toggleAll() {
+            this.selected = this.allSelected ? [] : [...this.pageIds];
+        },
+
+        clearAll() {
+            this.selected = [];
+        },
+
+        // ── Manual ordering ───────────────────────────────────────────────────
         saving: false,
         saved:  false,
         _savedTimer: null,
 
         init() {
+            if (! manualOrder) return;
             this.$nextTick(() => {
-                if (typeof Sortable === 'undefined' || !this.$refs.tbody) return;
+                if (typeof Sortable === 'undefined' || ! this.$refs.tbody) return;
                 Sortable.create(this.$refs.tbody, {
                     handle:     '.sort-handle',
                     animation:  150,
@@ -267,7 +384,6 @@ function manualOrderList(uid, page, perPage) {
                     },
                     body: JSON.stringify({ ids, page, per_page: perPage }),
                 });
-                // Notify all position cells on this page of their new positions
                 window.dispatchEvent(new CustomEvent('talos:page-reordered', { detail: newOrder }));
                 this.saved = true;
                 this._savedTimer = setTimeout(() => this.saved = false, 2500);
@@ -299,17 +415,9 @@ function positionCell(id, initialPos, uid, total) {
                 if (movedId === id) return;
 
                 if (newPos < oldPos) {
-                    // Item moved up — entries between newPos and oldPos-1 shift down
-                    if (this.pos >= newPos && this.pos <= oldPos - 1) {
-                        this.pos++;
-                        this.orig++;
-                    }
+                    if (this.pos >= newPos && this.pos <= oldPos - 1) { this.pos++; this.orig++; }
                 } else {
-                    // Item moved down — entries between oldPos+1 and newPos shift up
-                    if (this.pos >= oldPos + 1 && this.pos <= newPos) {
-                        this.pos--;
-                        this.orig--;
-                    }
+                    if (this.pos >= oldPos + 1 && this.pos <= newPos) { this.pos--; this.orig--; }
                 }
             });
         },
@@ -317,7 +425,6 @@ function positionCell(id, initialPos, uid, total) {
         async save() {
             const p = Math.max(1, Math.min(parseInt(this.pos) || 1, total));
             this.pos = p;
-
             if (p === this.orig) return;
 
             const oldPos = this.orig;
@@ -332,7 +439,6 @@ function positionCell(id, initialPos, uid, total) {
                     body: JSON.stringify({ id, position: p }),
                 });
                 this.orig = p;
-                // Notify sibling cells so they shift accordingly
                 window.dispatchEvent(new CustomEvent('talos:entry-moved', {
                     detail: { movedId: id, oldPos, newPos: p },
                 }));
@@ -340,12 +446,13 @@ function positionCell(id, initialPos, uid, total) {
                 clearTimeout(this._timer);
                 this._timer = setTimeout(() => this.saved = false, 2000);
             } catch (e) {
-                this.pos = this.orig; // revert on error
+                this.pos = this.orig;
             }
         },
     };
 }
 </script>
+@if($manualOrder)
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 @endif
 @endsection

@@ -63,6 +63,10 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::post('/{uid}/{id}/translate', [ContentManagerController::class, 'translate'])->name('translate');
             Route::post('/{uid}/reorder',        [ContentManagerController::class, 'reorder'])->name('reorder');
             Route::post('/{uid}/move',           [ContentManagerController::class, 'move'])->name('move');
+            Route::post('/{uid}/bulk-destroy',   [ContentManagerController::class, 'bulkDestroy'])->name('bulk-destroy');
+            Route::post('/{uid}/bulk-publish',   [ContentManagerController::class, 'bulkPublish'])->name('bulk-publish');
+            Route::post('/{uid}/bulk-unpublish', [ContentManagerController::class, 'bulkUnpublish'])->name('bulk-unpublish');
+            Route::post('/{uid}/{id}/duplicate', [ContentManagerController::class, 'duplicate'])->name('duplicate');
         });
 
         // Media Library

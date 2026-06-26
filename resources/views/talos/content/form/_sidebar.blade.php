@@ -93,6 +93,15 @@
             @endif
         </div>
 
+        <form action="{{ route('talos.content.duplicate', ['uid' => $uid, 'id' => $entry->id]) }}"
+              method="POST">
+            @csrf
+            <button type="submit"
+                    class="w-full py-2 bg-violet-50 hover:bg-violet-100 text-violet-600 rounded-lg text-sm font-medium transition-colors border border-violet-200">
+                Duplicate entry
+            </button>
+        </form>
+
         <form action="{{ route('talos.content.destroy', ['uid' => $uid, 'id' => $entry->id]) }}"
               method="POST" data-confirm="Delete this entry permanently?">
             @csrf @method('DELETE')
