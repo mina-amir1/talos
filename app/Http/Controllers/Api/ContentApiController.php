@@ -3,18 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\DispatchWebhook;
 use App\Services\ContentTypeService;
 use App\Services\DynamicModelService;
 use App\Services\EntryTransformerService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class ContentApiController extends Controller
 {
     public function __construct(
-        private ContentTypeService    $typeService,
-        private DynamicModelService   $modelService,
+        private ContentTypeService      $typeService,
+        private DynamicModelService     $modelService,
         private EntryTransformerService $transformer,
+        private NotificationService     $notifications,
     ) {}
 
     public function index(Request $request, string $name): JsonResponse
@@ -158,10 +161,20 @@ class ContentApiController extends Controller
             $entry = $model->newQuery()->first();
             $entry ? $entry->update($validated) : $entry = $model->newQuery()->create($validated);
 
+            $event     = 'entry.update';
+            $entryData = $entry->fresh()->toArray();
+            DispatchWebhook::dispatch($event, $uid, $entryData);
+            $this->notifications->dispatchEntryEvent($event, $uid, $entryData);
+
             return response()->json(['data' => $entry]);
         }
 
-        return response()->json(['data' => $model->newQuery()->create($validated)], 201);
+        $entry     = $model->newQuery()->create($validated);
+        $entryData = $entry->fresh()->toArray();
+        DispatchWebhook::dispatch('entry.create', $uid, $entryData);
+        $this->notifications->dispatchEntryEvent('entry.create', $uid, $entryData);
+
+        return response()->json(['data' => $entry], 201);
     }
 
     public function update(Request $request, string $name, string $id): JsonResponse
@@ -177,6 +190,10 @@ class ContentApiController extends Controller
         $entry = $this->resolveEntry($model, $id, (bool) ($contentType['options']['i18n'] ?? false), $this->requestLocale($request));
         $entry->update($request->all());
 
+        $entryData = $entry->fresh()->toArray();
+        DispatchWebhook::dispatch('entry.update', $uid, $entryData);
+        $this->notifications->dispatchEntryEvent('entry.update', $uid, $entryData);
+
         return response()->json(['data' => $entry]);
     }
 
@@ -191,6 +208,9 @@ class ContentApiController extends Controller
         $uid   = $contentType['__uid'];
         $model = $this->modelService->make($uid);
         $this->resolveEntry($model, $id, (bool) ($contentType['options']['i18n'] ?? false), $this->requestLocale($request))->delete();
+
+        DispatchWebhook::dispatch('entry.delete', $uid, ['id' => $id]);
+        $this->notifications->dispatchEntryEvent('entry.delete', $uid, ['id' => $id]);
 
         return response()->json(['data' => null], 200);
     }

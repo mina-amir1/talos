@@ -10,15 +10,17 @@ use App\Services\ContentEntryService;
 use App\Services\ContentTypeService;
 use App\Services\DynamicModelService;
 use App\Services\LocaleService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class ContentManagerController extends Controller
 {
     public function __construct(
-        private ContentTypeService  $typeService,
-        private DynamicModelService $modelService,
-        private ContentEntryService $entryService,
+        private ContentTypeService   $typeService,
+        private DynamicModelService  $modelService,
+        private ContentEntryService  $entryService,
+        private NotificationService  $notificationService,
     ) {}
 
     // ── Listing ───────────────────────────────────────────────────────────────
@@ -125,7 +127,9 @@ class ContentManagerController extends Controller
             $entry->update(['localizations_id' => $entry->id]);
         }
 
-        DispatchWebhook::dispatch('entry.create', $uid, $entry->fresh()->toArray());
+        $entryData = $entry->fresh()->toArray();
+        DispatchWebhook::dispatch('entry.create', $uid, $entryData);
+        $this->notificationService->dispatchEntryEvent('entry.create', $uid, $entryData);
 
         if ($isSingleType) {
             return redirect()->route('talos.content.edit', ['uid' => $uid, 'id' => $entry->id])
@@ -225,7 +229,9 @@ class ContentManagerController extends Controller
 
         $entry->update($data);
 
-        DispatchWebhook::dispatch('entry.update', $uid, $entry->fresh()->toArray());
+        $entryData = $entry->fresh()->toArray();
+        DispatchWebhook::dispatch('entry.update', $uid, $entryData);
+        $this->notificationService->dispatchEntryEvent('entry.update', $uid, $entryData);
 
         if ($isSingleType) {
             return redirect()->route('talos.content.edit', ['uid' => $uid, 'id' => $id])
@@ -246,6 +252,7 @@ class ContentManagerController extends Controller
         $this->modelService->make($uid)->newQuery()->findOrFail($id)->delete();
 
         DispatchWebhook::dispatch('entry.delete', $uid, ['id' => $id]);
+        $this->notificationService->dispatchEntryEvent('entry.delete', $uid, ['id' => $id]);
 
         return redirect()->route('talos.content.index', ['uid' => $uid])
             ->with('success', 'Entry deleted.');
@@ -258,7 +265,9 @@ class ContentManagerController extends Controller
         $entry = $this->modelService->make($uid)->newQuery()->findOrFail($id);
         $entry->update(['published_at' => now()]);
 
-        DispatchWebhook::dispatch('entry.publish', $uid, $entry->fresh()->toArray());
+        $entryData = $entry->fresh()->toArray();
+        DispatchWebhook::dispatch('entry.publish', $uid, $entryData);
+        $this->notificationService->dispatchEntryEvent('entry.publish', $uid, $entryData);
 
         return back()->with('success', 'Entry published.');
     }
@@ -268,7 +277,9 @@ class ContentManagerController extends Controller
         $entry = $this->modelService->make($uid)->newQuery()->findOrFail($id);
         $entry->update(['published_at' => null]);
 
-        DispatchWebhook::dispatch('entry.unpublish', $uid, $entry->fresh()->toArray());
+        $entryData = $entry->fresh()->toArray();
+        DispatchWebhook::dispatch('entry.unpublish', $uid, $entryData);
+        $this->notificationService->dispatchEntryEvent('entry.unpublish', $uid, $entryData);
 
         return back()->with('success', 'Entry unpublished.');
     }
@@ -316,7 +327,9 @@ class ContentManagerController extends Controller
         ]);
 
         foreach ($model->newQuery()->whereIn('id', $ids)->get() as $entry) {
-            DispatchWebhook::dispatch('entry.publish', $uid, $entry->toArray());
+            $entryData = $entry->toArray();
+            DispatchWebhook::dispatch('entry.publish', $uid, $entryData);
+            $this->notificationService->dispatchEntryEvent('entry.publish', $uid, $entryData);
         }
 
         return back()->with('success', $this->entryService->entryCount($ids, 'published'));
@@ -343,7 +356,9 @@ class ContentManagerController extends Controller
         ]);
 
         foreach ($model->newQuery()->whereIn('id', $ids)->get() as $entry) {
-            DispatchWebhook::dispatch('entry.unpublish', $uid, $entry->toArray());
+            $entryData = $entry->toArray();
+            DispatchWebhook::dispatch('entry.unpublish', $uid, $entryData);
+            $this->notificationService->dispatchEntryEvent('entry.unpublish', $uid, $entryData);
         }
 
         return back()->with('success', $this->entryService->entryCount($ids, 'unpublished'));

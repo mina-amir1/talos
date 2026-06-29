@@ -6,7 +6,9 @@ use App\Http\Controllers\Admin\ContentManagerController;
 use App\Http\Controllers\Admin\ContentTypeController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MediaController;
+use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SmtpController;
 use App\Http\Controllers\Admin\StorageSettingsController;
 use App\Http\Controllers\Admin\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +23,11 @@ Route::prefix($prefix)->name('talos.')->group(function () {
     Route::get('login',  [AuthController::class, 'showLogin'])->name('login');
     Route::post('login', [AuthController::class, 'login'])->name('login.post');
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::get('forgot-password',              [AuthController::class, 'showForgotPassword'])->name('forgot-password');
+    Route::post('forgot-password',             [AuthController::class, 'sendResetLink'])->name('forgot-password.send');
+    Route::get('reset-password/{token}',       [AuthController::class, 'showResetPassword'])->name('reset-password');
+    Route::post('reset-password',              [AuthController::class, 'updatePassword'])->name('reset-password.update');
 
     // ── Protected admin routes ─────────────────────────────────────────────
     Route::middleware(\App\Http\Middleware\TalosAdminAuth::class)->group(function () {
@@ -129,6 +136,19 @@ Route::prefix($prefix)->name('talos.')->group(function () {
             Route::delete('webhooks/{id}',            [WebhookController::class, 'destroy'])->name('webhooks.destroy');
             Route::post('webhooks/{id}/toggle',       [WebhookController::class, 'toggle'])->name('webhooks.toggle');
             Route::post('webhooks/{id}/test',         [WebhookController::class, 'test'])->name('webhooks.test');
+
+            // SMTP settings
+            Route::get('smtp',                        [SmtpController::class, 'index'])->name('smtp');
+            Route::post('smtp',                       [SmtpController::class, 'save'])->name('smtp.save');
+            Route::post('smtp/test-connection',       [SmtpController::class, 'testConnection'])->name('smtp.test-connection');
+            Route::post('smtp/test-email',            [SmtpController::class, 'sendTestEmail'])->name('smtp.test-email');
+
+            // Email notifications
+            Route::get('notifications',               [NotificationController::class, 'index'])->name('notifications');
+            Route::post('notifications',              [NotificationController::class, 'store'])->name('notifications.store');
+            Route::put('notifications/{id}',          [NotificationController::class, 'update'])->name('notifications.update');
+            Route::delete('notifications/{id}',       [NotificationController::class, 'destroy'])->name('notifications.destroy');
+            Route::post('notifications/{id}/toggle',  [NotificationController::class, 'toggle'])->name('notifications.toggle');
         });
     });
 });

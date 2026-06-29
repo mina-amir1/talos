@@ -116,9 +116,15 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide" for="password">
-                        Password
-                    </label>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide" for="password">
+                            Password
+                        </label>
+                        <a href="{{ route('talos.forgot-password') }}"
+                           class="text-xs text-blue-600 hover:text-blue-500 transition-colors">
+                            Forgot password?
+                        </a>
+                    </div>
                     <input id="password" name="password" type="password"
                            required placeholder="••••••••"
                            class="input-field">

@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendTalosEmail;
+use App\Mail\WelcomeUserMail;
 use App\Models\TalosApiToken;
 use App\Models\TalosRole;
 use App\Models\TalosUser;
 use App\Services\LocaleService;
+use App\Services\SmtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -100,7 +103,7 @@ class SettingsController extends Controller
         return view('talos.settings.users', compact('users', 'roles', 'isSA'));
     }
 
-    public function storeUser(Request $request)
+    public function storeUser(Request $request, SmtpService $smtp)
     {
         $request->validate([
             'firstname' => 'required|string|max:64',
@@ -118,6 +121,19 @@ class SettingsController extends Controller
             'role_id'   => $request->role_id,
             'is_active' => true,
         ]);
+
+        $cfg = $smtp->settings();
+        if ($cfg && $cfg->is_active && $cfg->host) {
+            $prefix   = config('talos.admin_prefix', 'talos');
+            $loginUrl = url("/{$prefix}/login");
+
+            SendTalosEmail::dispatch($request->email, new WelcomeUserMail(
+                $request->firstname . ' ' . $request->lastname,
+                $request->email,
+                $request->password,
+                $loginUrl,
+            ));
+        }
 
         return redirect()->route('talos.settings.users')->with('success', 'User created.');
     }
