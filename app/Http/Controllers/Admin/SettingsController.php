@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\SendTalosEmail;
-use App\Mail\WelcomeUserMail;
 use App\Models\TalosApiToken;
 use App\Models\TalosRole;
 use App\Models\TalosUser;
 use App\Services\LocaleService;
+use App\Services\PasswordResetService;
 use App\Services\SmtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -103,39 +102,32 @@ class SettingsController extends Controller
         return view('talos.settings.users', compact('users', 'roles', 'isSA'));
     }
 
-    public function storeUser(Request $request, SmtpService $smtp)
+    public function storeUser(Request $request, SmtpService $smtp, PasswordResetService $resetService)
     {
         $request->validate([
             'firstname' => 'required|string|max:64',
             'lastname'  => 'required|string|max:64',
             'email'     => 'required|email|unique:talos_users,email',
-            'password'  => 'required|string|min:8|confirmed',
             'role_id'   => 'nullable|exists:talos_roles,id',
         ]);
 
-        TalosUser::create([
+        $user = TalosUser::create([
             'firstname' => $request->firstname,
             'lastname'  => $request->lastname,
             'email'     => $request->email,
-            'password'  => Hash::make($request->password),
+            'password'  => Hash::make(Str::random(32)),
             'role_id'   => $request->role_id,
             'is_active' => true,
         ]);
 
+        $inviteUrl = $resetService->sendInvite($user);
+
         $cfg = $smtp->settings();
-        if ($cfg && $cfg->is_active && $cfg->host) {
-            $prefix   = config('talos.admin_prefix', 'talos');
-            $loginUrl = url("/{$prefix}/login");
+        $emailed = $cfg && $cfg->is_active && $cfg->host;
 
-            SendTalosEmail::dispatch($request->email, new WelcomeUserMail(
-                $request->firstname . ' ' . $request->lastname,
-                $request->email,
-                $request->password,
-                $loginUrl,
-            ));
-        }
-
-        return redirect()->route('talos.settings.users')->with('success', 'User created.');
+        return redirect()->route('talos.settings.users')
+            ->with('invite_url', $inviteUrl)
+            ->with('invite_emailed', $emailed);
     }
 
     public function destroyUser(int $id)

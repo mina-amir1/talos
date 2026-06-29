@@ -67,34 +67,56 @@
 
         {{-- Invite user --}}
         <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <h2 class="text-slate-800 font-semibold mb-4">Add Admin User</h2>
+            <h2 class="text-slate-800 font-semibold mb-1">Invite Admin User</h2>
+            <p class="text-xs text-slate-400 mb-4">An email with a setup link will be sent to the new user.</p>
+
+            @if(session('invite_url'))
+            <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 space-y-2">
+                <p class="text-xs font-medium text-emerald-800">
+                    User created.
+                    @if(session('invite_emailed'))
+                        An invite email has been sent.
+                    @else
+                        <span class="text-amber-700">SMTP not configured — share this link manually:</span>
+                    @endif
+                </p>
+                <div class="flex items-center gap-2" x-data="{ copied: false }">
+                    <input type="text" readonly value="{{ session('invite_url') }}"
+                           class="flex-1 min-w-0 border border-emerald-200 rounded-md px-2 py-1.5 text-xs font-mono bg-white text-slate-700 focus:outline-none"
+                           @click="$el.select()">
+                    <button type="button"
+                            @click="navigator.clipboard.writeText('{{ session('invite_url') }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                            class="shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors"
+                            :class="copied ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'">
+                        <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                </div>
+            </div>
+            @endif
+
+            @if($errors->any())
+            <div class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2 mb-4">
+                {{ $errors->first() }}
+            </div>
+            @endif
+
             <form action="{{ route('talos.settings.users.store') }}" method="POST" class="space-y-3">
                 @csrf
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">First name</label>
-                        <input name="firstname" type="text" required
+                        <input name="firstname" type="text" required value="{{ old('firstname') }}"
                                class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">Last name</label>
-                        <input name="lastname" type="text" required
+                        <input name="lastname" type="text" required value="{{ old('lastname') }}"
                                class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-500 mb-1">Email</label>
-                    <input name="email" type="email" required
-                           class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">Password</label>
-                    <input name="password" type="password" required minlength="8"
-                           class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">Confirm password</label>
-                    <input name="password_confirmation" type="password" required
+                    <input name="email" type="email" required value="{{ old('email') }}"
                            class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
@@ -104,7 +126,7 @@
                                 class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500 appearance-none pr-8">
                             <option value="">No role</option>
                             @foreach($roles as $role)
-                                <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>{{ $role->name }}</option>
                             @endforeach
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
@@ -116,7 +138,7 @@
                 </div>
                 <button type="submit"
                         class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors">
-                    Create user
+                    Send Invite
                 </button>
             </form>
         </div>

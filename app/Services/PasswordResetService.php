@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\SendTalosEmail;
+use App\Mail\InviteUserMail;
 use App\Mail\PasswordResetMail;
 use App\Models\TalosUser;
 use Illuminate\Support\Facades\DB;
@@ -10,7 +11,7 @@ use Illuminate\Support\Str;
 
 class PasswordResetService
 {
-    const EXPIRES_MINUTES = 60;
+    const EXPIRES_MINUTES = 1440; // 24 hours
 
     public function __construct(private SmtpService $smtp) {}
 
@@ -64,6 +65,29 @@ class PasswordResetService
         }
 
         return true;
+    }
+
+    public function sendInvite(TalosUser $user): string
+    {
+        $token = Str::random(64);
+
+        DB::table('talos_password_resets')->where('email', $user->email)->delete();
+
+        DB::table('talos_password_resets')->insert([
+            'email'      => $user->email,
+            'token'      => hash('sha256', $token),
+            'created_at' => now(),
+        ]);
+
+        $prefix    = config('talos.admin_prefix', 'talos');
+        $inviteUrl = url("/{$prefix}/reset-password/{$token}?email=" . urlencode($user->email));
+
+        $cfg = $this->smtp->settings();
+        if ($cfg && $cfg->is_active && $cfg->host) {
+            SendTalosEmail::dispatch($user->email, new InviteUserMail($user->full_name, $inviteUrl));
+        }
+
+        return $inviteUrl;
     }
 
     public function clear(string $email): void

@@ -22,7 +22,7 @@
 <div class="divider"></div>
 
 <p class="text-muted text-center">
-    This link expires in <strong style="color:#475569">60 minutes</strong>.
+    This link expires in <strong style="color:#475569">24 hours</strong>.
     If you didn&rsquo;t request a password reset, you can safely ignore this email &mdash; your account is secure.
 </p>
 
