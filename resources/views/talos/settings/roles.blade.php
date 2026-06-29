@@ -277,6 +277,7 @@ function roleEditor(id, existingPerms, types, updateUrl) {
                 if (res.ok) {
                     this.saved = true;
                     setTimeout(() => this.saved = false, 3000);
+                    talos.markClean();
                 }
             } finally {
                 this.saving = false;
