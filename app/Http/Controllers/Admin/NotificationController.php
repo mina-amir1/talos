@@ -23,7 +23,7 @@ class NotificationController extends Controller
         $contentTypes = collect($types->all())->mapWithKeys(fn($t) => [
             $t['__uid'] => $t['info']['displayName'] ?? $t['__uid'],
         ]);
-        $events       = self::EVENTS;
+        $events = self::EVENTS;
 
         return view('talos.settings.notifications', compact('rules', 'contentTypes', 'events'));
     }
@@ -32,7 +32,8 @@ class NotificationController extends Controller
     {
         $request->validate([
             'name'             => 'required|string|max:100',
-            'event'            => 'required|in:entry.create,entry.update,entry.delete,entry.publish,entry.unpublish',
+            'events'           => 'required|array|min:1',
+            'events.*'         => 'in:entry.create,entry.update,entry.delete,entry.publish,entry.unpublish',
             'content_type_uid' => 'nullable|string',
             'recipients'       => 'required|string',
             'fields'           => 'nullable|array',
@@ -41,7 +42,7 @@ class NotificationController extends Controller
 
         TalosNotificationRule::create([
             'name'             => $request->name,
-            'event'            => $request->event,
+            'events'           => $request->input('events', []),
             'content_type_uid' => $request->filled('content_type_uid') ? $request->content_type_uid : null,
             'recipients'       => $this->parseRecipients($request->recipients),
             'fields'           => $request->has('fields') ? array_values($request->fields) : null,
@@ -55,18 +56,17 @@ class NotificationController extends Controller
     {
         $request->validate([
             'name'             => 'required|string|max:100',
-            'event'            => 'required|in:entry.create,entry.update,entry.delete,entry.publish,entry.unpublish',
+            'events'           => 'required|array|min:1',
+            'events.*'         => 'in:entry.create,entry.update,entry.delete,entry.publish,entry.unpublish',
             'content_type_uid' => 'nullable|string',
             'recipients'       => 'required|string',
             'fields'           => 'nullable|array',
             'fields.*'         => 'string',
         ]);
 
-        $rule = TalosNotificationRule::findOrFail($id);
-
-        $rule->update([
+        TalosNotificationRule::findOrFail($id)->update([
             'name'             => $request->name,
-            'event'            => $request->event,
+            'events'           => $request->input('events', []),
             'content_type_uid' => $request->filled('content_type_uid') ? $request->content_type_uid : null,
             'recipients'       => $this->parseRecipients($request->recipients),
             'fields'           => $request->has('fields') ? array_values($request->fields) : null,

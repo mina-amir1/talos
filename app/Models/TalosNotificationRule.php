@@ -9,10 +9,11 @@ class TalosNotificationRule extends Model
     protected $table = 'talos_notification_rules';
 
     protected $fillable = [
-        'name', 'event', 'content_type_uid', 'recipients', 'fields', 'is_active',
+        'name', 'events', 'content_type_uid', 'recipients', 'fields', 'is_active',
     ];
 
     protected $casts = [
+        'events'     => 'array',
         'recipients' => 'array',
         'fields'     => 'array',
         'is_active'  => 'boolean',
@@ -21,7 +22,7 @@ class TalosNotificationRule extends Model
     public function matchesEvent(string $event, string $uid): bool
     {
         if (! $this->is_active) return false;
-        if ($this->event !== $event) return false;
+        if (! in_array($event, $this->events ?? [])) return false;
         if ($this->content_type_uid && $this->content_type_uid !== $uid) return false;
 
         return true;

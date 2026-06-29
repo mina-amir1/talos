@@ -8,11 +8,10 @@ use App\Models\TalosNotificationRule;
 
 class NotificationService
 {
-
     public function dispatchEntryEvent(string $event, string $uid, array $entry): void
     {
         $rules = TalosNotificationRule::where('is_active', true)
-            ->where('event', $event)
+            ->whereJsonContains('events', $event)
             ->where(function ($q) use ($uid) {
                 $q->whereNull('content_type_uid')->orWhere('content_type_uid', $uid);
             })

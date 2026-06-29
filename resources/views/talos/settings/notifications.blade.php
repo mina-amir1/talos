@@ -61,20 +61,30 @@
                     </p>
                 </div>
 
-                {{-- Event badge --}}
+                {{-- Event badges --}}
                 @php
-                    $color = match($rule->event) {
+                    $eventColors = [
                         'entry.create'    => 'bg-emerald-50 text-emerald-700 border-emerald-200',
                         'entry.update'    => 'bg-blue-50 text-blue-700 border-blue-200',
                         'entry.delete'    => 'bg-red-50 text-red-700 border-red-200',
                         'entry.publish'   => 'bg-violet-50 text-violet-700 border-violet-200',
                         'entry.unpublish' => 'bg-slate-100 text-slate-600 border-slate-200',
-                        default           => 'bg-slate-100 text-slate-600 border-slate-200',
-                    };
+                    ];
+                    $eventShort = [
+                        'entry.create'    => 'create',
+                        'entry.update'    => 'update',
+                        'entry.delete'    => 'delete',
+                        'entry.publish'   => 'publish',
+                        'entry.unpublish' => 'unpublish',
+                    ];
                 @endphp
-                <span class="hidden sm:inline text-[10px] font-medium px-1.5 py-0.5 rounded border {{ $color }}">
-                    {{ $rule->event }}
-                </span>
+                <div class="hidden sm:flex flex-wrap gap-1">
+                    @foreach($rule->events ?? [] as $ev)
+                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded border {{ $eventColors[$ev] ?? 'bg-slate-100 text-slate-600 border-slate-200' }}">
+                        {{ $eventShort[$ev] ?? $ev }}
+                    </span>
+                    @endforeach
+                </div>
 
                 {{-- Actions --}}
                 <div class="flex items-center gap-3 shrink-0">

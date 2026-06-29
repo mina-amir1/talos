@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('talos_notification_rules', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('event', 32);
+            $table->json('events');
             $table->string('content_type_uid')->nullable();
             $table->json('recipients');
             $table->json('fields')->nullable();
