@@ -4,10 +4,27 @@
 @section('header', 'Media Library')
 
 @section('content')
-<div x-data="mediaLibrary()" class="flex gap-5" style="min-height: 70vh">
+<div x-data="mediaLibrary()" class="flex flex-col lg:flex-row gap-4 lg:gap-5" style="min-height: 70vh">
+
+    {{-- ── Mobile: folder toggle button ──────────────────────────────── --}}
+    <div class="lg:hidden">
+        <button @click="showFolders = !showFolders"
+                class="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 w-full">
+            <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z"/>
+            </svg>
+            <span x-text="showFolders ? 'Hide folders' : 'Browse folders'"></span>
+            <svg class="w-4 h-4 ml-auto transition-transform" :class="showFolders ? 'rotate-180' : ''"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+    </div>
 
     {{-- ── Folder sidebar ──────────────────────────────────────────────── --}}
-    <aside class="w-52 flex-shrink-0 space-y-0.5">
+    <aside x-show="showFolders" x-cloak
+           class="lg:!block lg:w-52 lg:flex-shrink-0 space-y-0.5
+                  max-lg:bg-white max-lg:border max-lg:border-slate-200 max-lg:rounded-xl max-lg:p-3">
 
         <a href="{{ route('talos.media.index') }}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors
@@ -92,7 +109,7 @@
 
         {{-- Upload zone --}}
         <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <div class="relative border-2 border-dashed rounded-lg p-8 text-center transition-colors"
+            <div class="relative border-2 border-dashed rounded-lg p-4 sm:p-8 text-center transition-colors"
                  :class="dragging ? 'border-blue-500 bg-blue-50' : uploading ? 'border-blue-500 bg-blue-900/10' : 'border-slate-300 hover:border-slate-300'"
                  @dragenter.prevent="dragging = true"
                  @dragover.prevent="dragging = true"
@@ -124,24 +141,24 @@
         </div>
 
         {{-- Search / filter --}}
-        <div class="flex items-center gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
             <form method="GET" class="flex items-center gap-2 flex-1">
                 @if($folder) <input type="hidden" name="path" value="{{ $folder }}"> @endif
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by name…"
-                       class="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
-                <select name="type" class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-500 text-sm focus:outline-none focus:border-blue-500">
+                       class="flex-1 min-w-0 px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
+                <select name="type" class="px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-500 text-sm focus:outline-none focus:border-blue-500">
                     <option value="">All types</option>
                     <option value="image" {{ request('type') === 'image' ? 'selected' : '' }}>Images</option>
                     <option value="other"  {{ request('type') === 'other'  ? 'selected' : '' }}>Files</option>
                 </select>
-                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium">Search</button>
+                <button type="submit" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium flex-shrink-0">Search</button>
             </form>
-            <span class="text-slate-400 text-sm flex-shrink-0">{{ $media->total() }} file(s)</span>
+            <span class="text-slate-400 text-sm flex-shrink-0 text-right sm:text-left">{{ $media->total() }} file(s)</span>
         </div>
 
         {{-- Sub-folder tiles --}}
         @if(count($folders) > 0)
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 @foreach($folders as $f)
                     <div class="group relative flex flex-col items-center gap-1.5 p-3 bg-white border border-slate-200 hover:border-slate-300 rounded-xl transition-colors">
                         <a href="{{ route('talos.media.index', ['path' => $f['path']]) }}" class="flex flex-col items-center gap-1.5 w-full">
@@ -231,7 +248,7 @@
             </div>
         @endif
         @if($media->isNotEmpty() || true)
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="file-grid"
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4" id="file-grid"
                  x-show="{{ $media->isNotEmpty() ? 'true' : 'false' }} || newFiles.length > 0">
                 @foreach($media as $file)
                     <div class="group relative bg-white border border-slate-200 rounded-xl overflow-hidden transition-colors cursor-pointer"
@@ -414,6 +431,7 @@ function mediaLibrary() {
         dragging:      false,
         progress:      0,
         showNewFolder: false,
+        showFolders:   window.innerWidth >= 1024,
         currentFolder: '{{ $folder }}',
         selected:      [],
         allIds:        @json($media->pluck('id')),

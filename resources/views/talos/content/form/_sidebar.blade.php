@@ -4,7 +4,7 @@
         || in_array('publish', ($navUser?->role?->permissions['content-manager'][$uid] ?? []));
 @endphp
 
-<div class="w-64 space-y-4 sticky top-6">
+<div class="w-full lg:w-64 space-y-4 lg:sticky lg:top-6">
 
     {{-- Save / Publish --}}
     <div class="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
@@ -17,14 +17,14 @@
                     <span class="text-xs bg-slate-100 text-slate-400 border border-slate-300 px-2 py-0.5 rounded">Draft</span>
                 @endif
             </div>
-            <div class="space-y-2">
+            <div class="flex lg:flex-col gap-2">
                 <button type="submit" form="content-form" name="publish" value="0"
-                        class="w-full py-2 bg-slate-100 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-medium transition-colors">
+                        class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors">
                     {{ $canPublish ? 'Save as draft' : 'Save' }}
                 </button>
                 @if($canPublish)
                     <button type="submit" form="content-form" name="publish" value="1"
-                            class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors">
+                            class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors">
                         {{ $isEdit ? 'Save & Publish' : 'Create & Publish' }}
                     </button>
                 @endif

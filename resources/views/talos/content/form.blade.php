@@ -10,12 +10,13 @@
 
 @section('header-actions')
     <a href="{{ route('talos.content-type-builder.api-settings', ['uid' => $uid]) }}"
-       class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-sm transition-colors flex items-center gap-1.5">
+       class="p-2 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-sm transition-colors flex items-center gap-1.5"
+       title="API Fields">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
         </svg>
-        API Fields
+        <span class="hidden sm:inline">API Fields</span>
     </a>
 @endsection
 
@@ -77,13 +78,13 @@
     }
 @endphp
 
-<div class="flex gap-6 items-start">
+<div class="flex flex-col lg:flex-row gap-6 items-start">
 
     {{-- ── Main form ── --}}
     <form action="{{ $isEdit
             ? route('talos.content.update', ['uid' => $uid, 'id' => $entry->id])
             : route('talos.content.store', ['uid' => $uid]) }}"
-          method="POST" enctype="multipart/form-data" id="content-form" class="flex-1">
+          method="POST" enctype="multipart/form-data" id="content-form" class="flex-1 w-full min-w-0">
         @csrf
         @if($isEdit) @method('PUT') @endif
         @if($i18n)
@@ -190,7 +191,9 @@
     </form>
 
     {{-- ── Sidebar (outside the form to avoid nested-form issues) ── --}}
-    @include('talos.content.form._sidebar')
+    <div class="w-full lg:w-auto">
+        @include('talos.content.form._sidebar')
+    </div>
 
 </div>
 @endsection

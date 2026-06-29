@@ -112,14 +112,45 @@
     @stack('styles')
 </head>
 
-<body x-data="{ sidebarOpen: true }">
+<body x-data="{
+    sidebarOpen: window.innerWidth >= 1024,
+    isMobile: window.innerWidth < 1024,
+    init() {
+        const mq = window.matchMedia('(max-width: 1023px)');
+        mq.addEventListener('change', e => {
+            this.isMobile = e.matches;
+            this.sidebarOpen = !e.matches;
+        });
+    },
+    closeSidebarIfMobile() { if (this.isMobile) this.sidebarOpen = false; }
+}">
+
+{{-- Mobile backdrop --}}
+<div x-cloak x-show="isMobile && sidebarOpen"
+     @click="sidebarOpen = false"
+     class="fixed inset-0 z-40 bg-black/50 lg:hidden"
+     x-transition:enter="transition-opacity duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition-opacity duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0">
+</div>
+
 <div class="flex h-full">
 
     {{-- ══════════════════════════════════════════════════════════════
          SIDEBAR
     ══════════════════════════════════════════════════════════════ --}}
-    <aside x-show="sidebarOpen" x-cloak
-           class="flex flex-col flex-shrink-0 h-full overflow-hidden transition-all"
+    <aside x-cloak
+           :class="{
+               'translate-x-0':  sidebarOpen,
+               '-translate-x-full': !sidebarOpen && isMobile,
+               'hidden':         !sidebarOpen && !isMobile,
+           }"
+           class="flex flex-col flex-shrink-0 overflow-hidden transition-transform duration-200
+                  max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:shadow-2xl
+                  lg:relative lg:h-full"
            style="width:248px; background:#ffffff; border-right:1px solid #e2e8f0">
 
         {{-- Logo --}}
@@ -137,7 +168,8 @@
         </a>
 
         {{-- Navigation --}}
-        <nav class="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
+        <nav class="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5"
+             @click="$event.target.closest('a[href]') && closeSidebarIfMobile()">
             @php
                 $types      = app(\App\Services\ContentTypeService::class)->all();
                 $navUser    = $talosUser ?? null;
@@ -347,24 +379,24 @@
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {{-- Top bar --}}
-        <header class="flex items-center gap-3 px-6 flex-shrink-0"
-                style="height:52px; background:#ffffff; border-bottom:1px solid #e2e8f0">
+        <header class="flex flex-wrap items-center gap-2 px-3 sm:px-6 py-2 flex-shrink-0"
+                style="min-height:52px; background:#ffffff; border-bottom:1px solid #e2e8f0">
             <button @click="sidebarOpen = !sidebarOpen"
-                    class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex-shrink-0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
 
-            <h1 class="text-sm font-semibold text-slate-700 flex-1">@yield('header', 'Dashboard')</h1>
+            <h1 class="text-sm font-semibold text-slate-700 flex-1 min-w-0 truncate">@yield('header', 'Dashboard')</h1>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
                 @yield('header-actions')
             </div>
         </header>
 
         {{-- Content --}}
-        <main class="flex-1 overflow-y-auto p-6 bg-slate-50" id="talos-main">
+        <main class="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-50" id="talos-main">
 
             {{-- Flash: errors --}}
             @if($errors->any())

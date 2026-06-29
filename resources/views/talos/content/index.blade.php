@@ -19,28 +19,30 @@
         </div>
     @endif
     <a href="{{ route('talos.content-type-builder.api-settings', ['uid' => $uid]) }}"
-       class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-sm transition-colors flex items-center gap-1.5">
+       class="p-2 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-sm transition-colors flex items-center gap-1.5"
+       title="API Fields">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
         </svg>
-        API Fields
+        <span class="hidden sm:inline">API Fields</span>
     </a>
     <a href="{{ route('talos.content-type-builder.edit', ['uid' => $uid]) }}"
-       class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-sm transition-colors flex items-center gap-1.5">
+       class="p-2 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-sm transition-colors flex items-center gap-1.5"
+       title="Edit schema">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-        Edit schema
+        <span class="hidden sm:inline">Edit schema</span>
     </a>
     <a href="{{ route('talos.content.create', array_filter(['uid' => $uid, 'locale' => $i18n ? $locale : null])) }}"
-       class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+       class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
-        Create entry{{ $i18n ? ' (' . strtoupper($locale) . ')' : '' }}
+        <span class="hidden xs:inline sm:inline">Create{{ $i18n ? ' (' . strtoupper($locale) . ')' : '' }}</span>
     </a>
 @endsection
 
@@ -107,12 +109,12 @@
     </div>
 
     {{-- Table header --}}
-    <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
+    <div class="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-slate-200 flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-3 flex-wrap">
             <p class="text-sm text-slate-500">
                 {{ $entries->total() }} {{ $entries->total() === 1 ? 'entry' : 'entries' }}
                 @if($draftable)
-                    <span class="text-slate-400 ml-2 text-xs">(drafts visible — public API only exposes published)</span>
+                    <span class="hidden sm:inline text-slate-400 ml-2 text-xs">(drafts visible — public API only exposes published)</span>
                 @endif
             </p>
             @if($manualOrder)
@@ -161,18 +163,18 @@
                             @endif
                         @endif
                         <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider w-12">ID</th>
-                        @foreach($displayCols as $col)
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        @foreach($displayCols as $i => $col)
+                            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider {{ $i > 0 ? 'hidden sm:table-cell' : '' }}">
                                 {{ str_replace('_', ' ', $col) }}
                             </th>
                         @endforeach
                         @if($i18n)
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Locale</th>
+                            <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Locale</th>
                         @endif
                         @if($draftable)
                             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
                         @endif
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Created</th>
+                        <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Created</th>
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
@@ -219,8 +221,8 @@
                             @endif
 
                             <td class="px-4 py-3 text-slate-400 text-xs font-mono">{{ $entry->id }}</td>
-                            @foreach($displayCols as $col)
-                                <td class="px-4 py-3 text-slate-600">
+                            @foreach($displayCols as $i => $col)
+                                <td class="px-4 py-3 text-slate-600 {{ $i > 0 ? 'hidden sm:table-cell' : '' }}">
                                     @php $val = $entry->$col; @endphp
                                     @if(is_bool($val))
                                         <span class="{{ $val ? 'text-emerald-700' : 'text-slate-400' }}">{{ $val ? 'Yes' : 'No' }}</span>
@@ -234,7 +236,7 @@
                                 </td>
                             @endforeach
                             @if($i18n)
-                                <td class="px-4 py-3">
+                                <td class="hidden sm:table-cell px-4 py-3">
                                     <span class="text-xs bg-slate-100 text-slate-500 border border-slate-300 px-2 py-0.5 rounded font-mono">
                                         {{ strtoupper($entry->locale ?? '?') }}
                                     </span>
@@ -249,7 +251,7 @@
                                     @endif
                                 </td>
                             @endif
-                            <td class="px-4 py-3 text-slate-400 text-xs">{{ \Carbon\Carbon::parse($entry->created_at)->diffForHumans() }}</td>
+                            <td class="hidden sm:table-cell px-4 py-3 text-slate-400 text-xs">{{ \Carbon\Carbon::parse($entry->created_at)->diffForHumans() }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-1 justify-end">
                                     @if($draftable)
