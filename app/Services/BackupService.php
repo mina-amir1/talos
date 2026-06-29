@@ -61,9 +61,8 @@ class BackupService
         ['path' => $tmpPath, 'name' => $zipName] = $this->createZip();
 
         try {
-            $disk  = $this->storage->backupDisk();
             $r2Key = 'backups/' . $zipName;
-            $disk->put($r2Key, file_get_contents($tmpPath));
+            $this->storage->uploadBackup($tmpPath, $r2Key);
         } finally {
             if (file_exists($tmpPath)) {
                 unlink($tmpPath);

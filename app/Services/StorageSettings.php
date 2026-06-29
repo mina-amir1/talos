@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\TalosSettings;
+use Aws\S3\MultipartUploader;
+use Aws\S3\S3Client;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 
@@ -118,6 +120,30 @@ class StorageSettings
     public function makeDiskWith(string $accountId, string $accessKey, string $secretKey, string $bucket): Filesystem
     {
         return $this->buildR2Disk($accountId, $accessKey, $secretKey, $bucket);
+    }
+
+    public function uploadBackup(string $localPath, string $r2Key): void
+    {
+        $accountId = TalosSettings::get('r2_backup_account_id');
+        $accessKey = TalosSettings::get('r2_backup_access_key');
+        $secretKey = TalosSettings::get('r2_backup_secret_key');
+        $bucket    = TalosSettings::get('r2_backup_bucket');
+
+        $client = new S3Client([
+            'version'                 => 'latest',
+            'region'                  => 'auto',
+            'endpoint'                => "https://{$accountId}.r2.cloudflarestorage.com",
+            'use_path_style_endpoint' => false,
+            'credentials'             => ['key' => $accessKey, 'secret' => $secretKey],
+        ]);
+
+        $uploader = new MultipartUploader($client, $localPath, [
+            'bucket'    => $bucket,
+            'key'       => $r2Key,
+            'part_size' => 10 * 1024 * 1024, // 10 MB chunks
+        ]);
+
+        $uploader->upload();
     }
 
     private function buildR2Disk(string $accountId, string $accessKey, string $secretKey, string $bucket): Filesystem
