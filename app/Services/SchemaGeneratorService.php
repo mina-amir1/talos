@@ -159,7 +159,7 @@ class SchemaGeneratorService
             'time'
                 => $bp->time($name),
 
-            'json', 'component', 'dynamiczone', 'media', 'repeater'
+            'json', 'component', 'dynamiczone', 'media', 'repeater', 'file'
                 => $bp->json($name),
 
             'relation' => in_array($field['relation'] ?? 'manyToOne', ['oneToMany', 'manyToMany'])

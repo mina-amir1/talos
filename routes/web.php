@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ComponentController;
 use App\Http\Controllers\Admin\ContentManagerController;
 use App\Http\Controllers\Admin\ContentTypeController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\FileController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -77,6 +78,8 @@ Route::prefix($prefix)->name('talos.')->group(function () {
         });
 
         // Media Library
+        Route::get('files/{id}/download', [FileController::class, 'download'])->name('files.download');
+
         Route::prefix('media')->name('media.')->group(function () {
             Route::get('/',               [MediaController::class, 'index'])->name('index');
             Route::post('/upload',        [MediaController::class, 'upload'])->name('upload');

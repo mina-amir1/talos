@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ContentApiController;
+use App\Http\Controllers\Api\FileUploadController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,6 +19,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(\App\Http\Middleware\TalosApiAuth::class)
     ->prefix('/')
     ->group(function () {
+        // ── File upload / download ──────────────────────────────────────────
+        Route::post('upload',                 [FileUploadController::class, 'upload']);
+        Route::get('files/{id}/download',      [FileUploadController::class, 'download']);
+
         // ── Collection-type routes (with ID) ──────────────────────────────
         Route::get('{name}/{id}',    [ContentApiController::class, 'show']);
         Route::put('{name}/{id}',    [ContentApiController::class, 'update']);

@@ -62,7 +62,7 @@ class DynamicModelService
                 'integer', 'biginteger'                     => 'integer',
                 'float'                                      => 'float',
                 'decimal'                                    => 'decimal:2',
-                'json', 'component', 'dynamiczone', 'media', 'repeater' => 'array',
+                'json', 'component', 'dynamiczone', 'media', 'repeater', 'file' => 'array',
                 'relation' => in_array($field['relation'] ?? 'manyToOne', ['oneToMany', 'manyToMany']) ? 'array' : 'integer',
                 'date'                                       => 'date',
                 'datetime'                                   => 'datetime',

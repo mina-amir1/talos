@@ -32,6 +32,7 @@ $cats = [
     ],
     'Media' => [
         ['type'=>'media',       'label'=>'Media',        'icon'=>'🖼', 'color'=>'pink',   'desc'=>'Images and files from media library'],
+        ['type'=>'file',        'label'=>'File',         'icon'=>'📎', 'color'=>'amber',  'desc'=>'Downloadable files (PDF, docs, CVs) — separate from the media library'],
     ],
     'Relations' => [
         ['type'=>'relation',    'label'=>'Relation',     'icon'=>'⟷', 'color'=>'yellow', 'desc'=>'Link to another content type'],
@@ -57,6 +58,7 @@ $cardClass = [
     'yellow' => 'bg-yellow-500/15 text-amber-600',
     'indigo' => 'bg-indigo-500/15 text-indigo-400',
     'teal'   => 'bg-teal-500/15 text-teal-400',
+    'amber'  => 'bg-amber-500/15 text-amber-500',
 ];
 @endphp
 
@@ -427,8 +429,8 @@ foreach(($components ?? []) as $cat => $comps) {
                                 </div>
                             </template>
 
-                            {{-- Media --}}
-                            <template x-if="editingField && editingField.type === 'media'">
+                            {{-- Media / File --}}
+                            <template x-if="editingField && ['media','file'].includes(editingField.type)">
                                 <div @click="editingField.multiple = !editingField.multiple"
                                      class="flex items-center justify-between p-4 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-100/50 transition-colors">
                                     <div>
@@ -655,7 +657,7 @@ foreach(($components ?? []) as $cat => $comps) {
                             </template>
 
                             {{-- Default value --}}
-                            <template x-if="editingField && !['component','dynamiczone','media','relation','richtext','repeater','boolean'].includes(editingField.type)">
+                            <template x-if="editingField && !['component','dynamiczone','media','file','relation','richtext','repeater','boolean'].includes(editingField.type)">
                                 <div>
                                     <label class="block text-sm font-medium text-slate-600 mb-2">Default value</label>
                                     <input type="text" x-model="editingField.default"
@@ -1021,8 +1023,8 @@ foreach(($components ?? []) as $cat => $comps) {
                                     </div>
                                 </template>
 
-                                {{-- Media --}}
-                                <template x-if="cc() && cc().cEditingField && cc().cEditingField.type === 'media'">
+                                {{-- Media / File --}}
+                                <template x-if="cc() && cc().cEditingField && ['media','file'].includes(cc().cEditingField.type)">
                                     <div @click="cc().cEditingField.multiple = !cc().cEditingField.multiple"
                                          class="flex items-center justify-between p-4 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-100/50 transition-colors">
                                         <div>
@@ -1175,7 +1177,7 @@ foreach(($components ?? []) as $cat => $comps) {
                                 </template>
 
                                 {{-- Default value --}}
-                                <template x-if="cc() && cc().cEditingField && !['component','dynamiczone','media','relation','richtext','repeater','boolean'].includes(cc().cEditingField.type)">
+                                <template x-if="cc() && cc().cEditingField && !['component','dynamiczone','media','file','relation','richtext','repeater','boolean'].includes(cc().cEditingField.type)">
                                     <div>
                                         <label class="block text-sm font-medium text-slate-600 mb-2">Default value</label>
                                         <input type="text" x-model="cc().cEditingField.default"
@@ -1273,6 +1275,7 @@ function fieldBuilder(initialAttributes, uid, initialComponents, initialOptions)
         json:        { icon: '{}',  bg: 'bg-gray-500/20',    text: 'text-slate-500',  badge: 'bg-gray-500/15 text-slate-500',    label: 'JSON' },
         enumeration: { icon: '≡',   bg: 'bg-purple-500/20',  text: 'text-violet-600', badge: 'bg-purple-500/15 text-violet-600', label: 'Enumeration' },
         media:       { icon: '🖼',  bg: 'bg-pink-500/20',    text: 'text-pink-400',   badge: 'bg-pink-500/15 text-pink-400',     label: 'Media' },
+        file:        { icon: '📎',  bg: 'bg-amber-500/20',   text: 'text-amber-500',  badge: 'bg-amber-500/15 text-amber-500',   label: 'File' },
         relation:    { icon: '⟷',  bg: 'bg-yellow-500/20',  text: 'text-amber-600',  badge: 'bg-yellow-500/15 text-amber-600',  label: 'Relation' },
         component:   { icon: '⬡',   bg: 'bg-indigo-500/20',  text: 'text-indigo-400', badge: 'bg-indigo-500/15 text-indigo-400', label: 'Component' },
         dynamiczone: { icon: '⬡+',  bg: 'bg-indigo-500/20',  text: 'text-indigo-400', badge: 'bg-indigo-500/15 text-indigo-400', label: 'Dynamic Zone' },

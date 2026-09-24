@@ -123,17 +123,27 @@ class ContentTypeService
         $rules = [];
 
         foreach ($attributes as $name => $field) {
+            $type       = $field['type'] ?? 'string';
+            $isMultiple = $field['multiple'] ?? false;
+
             $rule   = [];
             $rule[] = ($field['required'] ?? false) ? 'required' : 'nullable';
-            $rule[] = match ($field['type'] ?? 'string') {
-                'string', 'text', 'richtext', 'uid', 'url' => 'string',
-                'email'                => 'email',
-                'integer', 'biginteger' => 'integer',
-                'decimal', 'float'     => 'numeric',
-                'boolean'              => 'boolean',
-                'date', 'datetime'     => 'date',
-                default                => 'string',
-            };
+
+            if (in_array($type, ['file', 'media'], true) && $isMultiple) {
+                $rule[] = 'array';
+                $rules["$name.*"] = 'integer';
+            } else {
+                $rule[] = match ($type) {
+                    'string', 'text', 'richtext', 'uid', 'url' => 'string',
+                    'email'                => 'email',
+                    'integer', 'biginteger' => 'integer',
+                    'decimal', 'float'     => 'numeric',
+                    'boolean'              => 'boolean',
+                    'date', 'datetime'     => 'date',
+                    'file', 'media'        => 'integer',
+                    default                => 'string',
+                };
+            }
 
             if (isset($field['maxLength'])) $rule[] = 'max:' . $field['maxLength'];
             if (isset($field['min']))        $rule[] = 'min:' . $field['min'];

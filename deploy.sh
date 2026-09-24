@@ -896,6 +896,10 @@ server {
     # Protect SQLite database
     location ~* \.sqlite$ { deny all; }
 
+    # Private uploaded files (CVs, docs, etc.) must go through the authenticated
+    # download endpoint — never served directly, unlike public media assets.
+    location ^~ /storage/talos/files/ { deny all; return 404; }
+
     access_log /var/log/nginx/talos-${DOMAIN}-access.log;
     error_log  /var/log/nginx/talos-${DOMAIN}-error.log;
 }

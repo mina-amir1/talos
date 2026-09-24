@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\FileRejectedException;
 use App\Http\Controllers\Controller;
 use App\Jobs\DispatchWebhook;
 use App\Services\ContentTypeService;
 use App\Services\DynamicModelService;
 use App\Services\EntryTransformerService;
+use App\Services\FileUploadService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +20,43 @@ class ContentApiController extends Controller
         private DynamicModelService     $modelService,
         private EntryTransformerService $transformer,
         private NotificationService     $notifications,
+        private FileUploadService       $uploads,
     ) {}
+
+    /**
+     * Resolve any uploaded files on `file`-type fields into TalosFile IDs, so a single
+     * multipart request can carry both the entry's fields and the file(s) to attach.
+     * Existing `file`/`media` values sent as plain IDs (the two-step flow) pass through untouched.
+     *
+     * Returns ['values' => [field => id|ids], 'error' => ?JsonResponse]. Resolved values are
+     * merged in by the caller rather than written back onto the request — Request::all() re-derives
+     * files from allFiles(), which memoizes on first access, so mutating the request in place here
+     * would not reliably stick.
+     */
+    private function resolveFileUploads(Request $request, array $attributes): array
+    {
+        $values = [];
+
+        foreach ($attributes as $name => $field) {
+            if (($field['type'] ?? null) !== 'file' || ! $request->hasFile($name)) {
+                continue;
+            }
+
+            $isMultiple = $field['multiple'] ?? false;
+            $uploaded   = $request->file($name);
+            $files      = is_array($uploaded) ? $uploaded : [$uploaded];
+
+            try {
+                $ids = array_map(fn ($f) => $this->uploads->store($f)->id, $files);
+            } catch (FileRejectedException $e) {
+                return ['values' => [], 'error' => response()->json(['error' => $e->getMessage()], 422)];
+            }
+
+            $values[$name] = $isMultiple ? $ids : $ids[0];
+        }
+
+        return ['values' => $values, 'error' => null];
+    }
 
     public function index(Request $request, string $name): JsonResponse
     {
@@ -153,8 +191,20 @@ class ContentApiController extends Controller
             return $this->notFound($name);
         }
 
-        $uid       = $contentType['__uid'];
-        $validated = $request->validate($this->typeService->buildValidationRules($contentType['attributes'] ?? []));
+        $uid        = $contentType['__uid'];
+        $attributes = $contentType['attributes'] ?? [];
+
+        $upload = $this->resolveFileUploads($request, $attributes);
+        if ($upload['error']) {
+            return $upload['error'];
+        }
+
+        $rules = $this->typeService->buildValidationRules($attributes);
+        foreach (array_keys($upload['values']) as $field) {
+            unset($rules[$field], $rules["$field.*"]);
+        }
+
+        $validated = array_merge($request->validate($rules), $upload['values']);
         $model     = $this->modelService->make($uid);
 
         if (($contentType['kind'] ?? 'collectionType') === 'singleType') {
@@ -185,10 +235,16 @@ class ContentApiController extends Controller
             return $this->notFound($name);
         }
 
-        $uid   = $contentType['__uid'];
+        $uid = $contentType['__uid'];
+
+        $upload = $this->resolveFileUploads($request, $contentType['attributes'] ?? []);
+        if ($upload['error']) {
+            return $upload['error'];
+        }
+
         $model = $this->modelService->make($uid);
         $entry = $this->resolveEntry($model, $id, (bool) ($contentType['options']['i18n'] ?? false), $this->requestLocale($request));
-        $entry->update($request->all());
+        $entry->update(array_merge($request->all(), $upload['values']));
 
         $entryData = $entry->fresh()->toArray();
         DispatchWebhook::dispatch('entry.update', $uid, $entryData);
@@ -227,15 +283,27 @@ class ContentApiController extends Controller
             return response()->json(['error' => "Use PUT /{$name}/{id} for collection types."], 400);
         }
 
-        $uid   = $contentType['__uid'];
+        $uid        = $contentType['__uid'];
+        $attributes = $contentType['attributes'] ?? [];
+
+        $upload = $this->resolveFileUploads($request, $attributes);
+        if ($upload['error']) {
+            return $upload['error'];
+        }
+
         $model = $this->modelService->make($uid);
         $entry = $model->newQuery()->first();
 
         if (! $entry) {
-            $validated = $request->validate($this->typeService->buildValidationRules($contentType['attributes'] ?? []));
+            $rules = $this->typeService->buildValidationRules($attributes);
+            foreach (array_keys($upload['values']) as $field) {
+                unset($rules[$field], $rules["$field.*"]);
+            }
+
+            $validated = array_merge($request->validate($rules), $upload['values']);
             $entry     = $model->newQuery()->create($validated);
         } else {
-            $entry->update($request->all());
+            $entry->update(array_merge($request->all(), $upload['values']));
         }
 
         return response()->json(['data' => $entry]);

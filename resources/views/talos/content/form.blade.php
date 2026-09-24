@@ -167,6 +167,10 @@
                             @include('talos.content.form._field_media')
                             @break
 
+                        @case('file')
+                            @include('talos.content.form._field_file')
+                            @break
+
                         @case('component')
                             @include('talos.content.form._field_component')
                             @break

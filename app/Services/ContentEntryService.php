@@ -17,7 +17,7 @@ class ContentEntryService
         $data = [];
 
         foreach ($attributes as $name => $field) {
-            if ($field['type'] === 'media') {
+            if (in_array($field['type'], ['media', 'file'])) {
                 $raw         = $request->input($name . '_id');
                 $data[$name] = ($field['multiple'] ?? false)
                     ? (is_string($raw) ? json_decode($raw, true) : ($raw ?? []))
@@ -92,7 +92,7 @@ class ContentEntryService
         foreach ($attributes as $name => $field) {
             $type = $field['type'] ?? '';
 
-            if (in_array($type, ['media', 'relation', 'component', 'dynamiczone', 'richtext', 'json'])) {
+            if (in_array($type, ['media', 'file', 'relation', 'component', 'dynamiczone', 'richtext', 'json'])) {
                 continue;
             }
 

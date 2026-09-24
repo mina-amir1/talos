@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\TalosFile;
 use App\Models\TalosMedia;
 use Illuminate\Support\Collection;
 
@@ -21,6 +22,7 @@ class EntryTransformerService
     public function transform(array $entries, array $attributes, ?array $apiFields, string $locale): array
     {
         $entries = $this->resolveMediaFields($entries, $attributes);
+        $entries = $this->resolveFileFields($entries, $attributes);
         $entries = $this->resolveRelationFields($entries, $attributes, $locale);
         $entries = array_map(fn($entry) => $this->applyApiFields($entry, $apiFields), $entries);
 
@@ -144,6 +146,60 @@ class EntryTransformerService
         }
 
         return $entry;
+    }
+
+    private function resolveFileFields(array $entries, array $attributes): array
+    {
+        if (empty($entries)) {
+            return $entries;
+        }
+
+        $fileFields = array_keys(array_filter($attributes, fn($f) => ($f['type'] ?? '') === 'file'));
+
+        if (empty($fileFields)) {
+            return $entries;
+        }
+
+        $allIds = [];
+        foreach ($entries as $entry) {
+            foreach ($fileFields as $field) {
+                $val = $entry[$field] ?? null;
+                if (is_array($val)) {
+                    foreach ($val as $id) {
+                        if (is_numeric($id) && $id) $allIds[] = (int) $id;
+                    }
+                } elseif (is_numeric($val) && $val) {
+                    $allIds[] = (int) $val;
+                }
+            }
+        }
+
+        if (empty($allIds)) {
+            return $entries;
+        }
+
+        $fileMap = TalosFile::whereIn('id', array_unique($allIds))->get()->keyBy('id');
+
+        foreach ($entries as &$entry) {
+            foreach ($fileFields as $field) {
+                $def        = $attributes[$field];
+                $isMultiple = $def['multiple'] ?? false;
+                $val        = $entry[$field] ?? null;
+
+                if ($isMultiple) {
+                    $ids          = is_array($val) ? $val : [];
+                    $entry[$field] = array_values(array_filter(
+                        array_map(fn($id) => $fileMap->get((int) $id)?->toArray(), $ids)
+                    ));
+                } else {
+                    $id            = is_numeric($val) ? (int) $val : null;
+                    $entry[$field] = $id ? $fileMap->get($id)?->toArray() : null;
+                }
+            }
+        }
+        unset($entry);
+
+        return $entries;
     }
 
     private function resolveRelationFields(array $entries, array $attributes, string $locale): array
