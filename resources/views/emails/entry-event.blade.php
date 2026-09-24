@@ -74,7 +74,7 @@ $iconBg = match($event) {
         <span class="badge {{ $badgeClass }}">{{ $eventLabel }}</span>
     </p>
     <p style="margin-top:8px;color:#94a3b8;font-size:12px">
-        Content type: <strong style="color:#475569;font-family:'SF Mono','Fira Code','Courier New',monospace">{{ $uid }}</strong>
+        Content type: <strong style="color:#475569">{{ $contentTypeLabel }}</strong>
     </p>
 </div>
 

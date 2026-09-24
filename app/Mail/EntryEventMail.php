@@ -10,7 +10,7 @@ class EntryEventMail extends Mailable
 {
     public function __construct(
         public readonly string $ruleName,
-        public readonly string $uid,
+        public readonly string $contentTypeLabel,
         public readonly string $event,
         public readonly array  $fields,
     ) {}
@@ -26,7 +26,7 @@ class EntryEventMail extends Mailable
             default           => ucwords(str_replace(['.', '_'], ' ', $this->event)),
         };
 
-        return new Envelope(subject: "[Talos] {$label} — {$this->uid}");
+        return new Envelope(subject: "[Talos] {$label} — {$this->contentTypeLabel}");
     }
 
     public function content(): Content

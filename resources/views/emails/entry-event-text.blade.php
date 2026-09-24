@@ -1,7 +1,7 @@
 {{ $ruleName }} — {{ strtoupper(str_replace('entry.', '', $event)) }}
 {{ str_repeat('=', strlen($ruleName) + strlen($event) + 5) }}
 
-Content type: {{ $uid }}
+Content type: {{ $contentTypeLabel }}
 
 @foreach($fields as $key => $value)
 {{ $key }}: {{ is_array($value) ? json_encode($value) : ($value ?? 'null') }}
