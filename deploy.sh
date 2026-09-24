@@ -1043,6 +1043,7 @@ server {
 
     location ~ /\.(?!well-known).* { deny all; }
     location ~* \.sqlite$ { deny all; }
+    location ^~ /storage/talos/files/ { deny all; return 404; }
 
     access_log /var/log/nginx/talos-${DOMAIN}-access.log;
     error_log  /var/log/nginx/talos-${DOMAIN}-error.log;
