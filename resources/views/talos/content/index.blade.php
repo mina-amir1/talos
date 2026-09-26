@@ -165,7 +165,7 @@
                         <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider w-12">ID</th>
                         @foreach($displayCols as $i => $col)
                             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider {{ $i > 0 ? 'hidden sm:table-cell' : '' }}">
-                                {{ str_replace('_', ' ', $col) }}
+                                {{ $attributes[$col]['displayName'] ?? str_replace('_', ' ', $col) }}
                             </th>
                         @endforeach
                         @if($i18n)

@@ -103,7 +103,7 @@
             @foreach($attributes as $name => $field)
                 @php
                     $value    = $isEdit ? ($entry->$name ?? null) : old($name, $field['default'] ?? null);
-                    $label    = ucwords(str_replace('_', ' ', $name));
+                    $label    = $field['displayName'] ?? ucwords(str_replace('_', ' ', $name));
                     $required = $field['required'] ?? false;
                 @endphp
 

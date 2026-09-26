@@ -37,7 +37,7 @@
             @foreach($compSchema['attributes'] ?? [] as $subName => $subField)
                 <div>
                     <label class="block text-sm font-medium text-slate-600 mb-2">
-                        {{ ucwords(str_replace('_', ' ', $subName)) }}
+                        {{ $subField['displayName'] ?? ucwords(str_replace('_', ' ', $subName)) }}
                         <span class="text-slate-400 text-xs font-normal ml-1">({{ $subField['type'] }})</span>
                     </label>
                     @include('talos.content.form._field_subfield', [

@@ -175,7 +175,10 @@ foreach(($components ?? []) as $cat => $comps) {
                         </div>
 
                         <div class="flex-1 min-w-0 flex items-center gap-2.5 flex-wrap">
-                            <span class="text-slate-800 font-medium font-mono text-sm" x-text="field.name"></span>
+                            <span class="text-slate-800 font-medium text-sm" x-text="field.displayName || prettifyName(field.name)"></span>
+                            <template x-if="field.displayName">
+                                <span class="text-slate-400 font-mono text-xs" x-text="field.name"></span>
+                            </template>
                             <span class="px-2 py-0.5 rounded-full text-xs font-medium"
                                   :class="typeStyle(field.type).badge"
                                   x-text="typeStyle(field.type).label"></span>
@@ -364,16 +367,26 @@ foreach(($components ?? []) as $cat => $comps) {
                     <template x-if="editingField">
                         <div class="space-y-5">
 
-                            {{-- Field name --}}
+                            {{-- Display name --}}
                             <div>
                                 <label class="block text-sm font-medium text-slate-600 mb-2">
-                                    Name <span class="text-red-600">*</span>
+                                    Display name <span class="text-red-600">*</span>
                                 </label>
-                                <input type="text" x-model="editingField.name" placeholder="e.g. title"
+                                <input type="text" x-model="editingField.displayName" placeholder="e.g. Title"
+                                       class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-slate-800 text-sm
+                                              focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all">
+                                <p class="text-xs text-slate-400 mt-1.5">Shown in the dashboard.</p>
+                            </div>
+
+                            {{-- Field name --}}
+                            <div>
+                                <label class="block text-sm font-medium text-slate-600 mb-2">Name</label>
+                                <input type="text" x-model="editingField.name"
+                                       :placeholder="slugify(editingField.displayName) || 'e.g. title'"
                                        class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-slate-800 text-sm
                                               focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 font-mono transition-all"
                                        @input="editingField.name = $el.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
-                                <p class="text-xs text-slate-400 mt-1.5">Lowercase letters, numbers and underscores only</p>
+                                <p class="text-xs text-slate-400 mt-1.5">Lowercase letters, numbers and underscores only. Leave blank to auto-generate from the display name.</p>
                             </div>
 
                             {{-- Max length (string / uid) --}}
@@ -537,7 +550,10 @@ foreach(($components ?? []) as $cat => $comps) {
                                     <div class="space-y-1.5 mb-3">
                                         <template x-for="sf in getSubFieldArray()" :key="sf.name">
                                             <div class="flex items-center gap-2 px-3 py-2.5 bg-slate-100 rounded-lg">
-                                                <span class="text-xs font-mono text-slate-800 flex-1" x-text="sf.name"></span>
+                                                <span class="text-xs text-slate-800 flex-1" x-text="sf.displayName || prettifyName(sf.name)"></span>
+                                                <template x-if="sf.displayName">
+                                                    <span class="text-xs font-mono text-slate-400" x-text="sf.name"></span>
+                                                </template>
                                                 <span class="text-xs text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded" x-text="sf.type"></span>
                                                 <template x-if="sf.required">
                                                     <span class="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">req</span>
@@ -561,13 +577,12 @@ foreach(($components ?? []) as $cat => $comps) {
                                     {{-- Add sub-field form --}}
                                     <div class="p-3 bg-slate-100 rounded-xl border border-slate-300 space-y-2.5">
 
-                                        {{-- Name + type row --}}
+                                        {{-- Display name + type row --}}
                                         <div class="flex gap-2">
-                                            <input type="text" x-model="newSubFieldName"
-                                                   placeholder="field_name"
+                                            <input type="text" x-model="newSubFieldConfig.displayName"
+                                                   placeholder="Display name *"
                                                    @keydown.enter.prevent="addSubField()"
-                                                   @input="newSubFieldName = $el.value.toLowerCase().replace(/[^a-z0-9_]/g,'')"
-                                                   class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs font-mono focus:outline-none focus:border-blue-500">
+                                                   class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
                                             <select x-model="newSubFieldType" @change="newSubFieldConfig = {}"
                                                     class="px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-blue-500">
                                                 <option value="string">String</option>
@@ -586,6 +601,15 @@ foreach(($components ?? []) as $cat => $comps) {
                                                 <option value="enumeration">Enumeration</option>
                                                 <option value="json">JSON</option>
                                             </select>
+                                        </div>
+
+                                        {{-- Field name --}}
+                                        <div>
+                                            <input type="text" x-model="newSubFieldName"
+                                                   :placeholder="slugify(newSubFieldConfig.displayName) || 'field_name (auto-generated)'"
+                                                   @keydown.enter.prevent="addSubField()"
+                                                   @input="newSubFieldName = $el.value.toLowerCase().replace(/[^a-z0-9_]/g,'')"
+                                                   class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs font-mono focus:outline-none focus:border-blue-500">
                                         </div>
 
                                         {{-- Max length — string --}}
@@ -648,7 +672,7 @@ foreach(($components ?? []) as $cat => $comps) {
                                             </template>
                                         </div>
 
-                                        <button type="button" @click="addSubField()" :disabled="!newSubFieldName"
+                                        <button type="button" @click="addSubField()" :disabled="!newSubFieldConfig.displayName"
                                                 class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors">
                                             Add sub-field
                                         </button>
@@ -724,7 +748,7 @@ foreach(($components ?? []) as $cat => $comps) {
                             x-text="editingIndex === null ? '← Back' : 'Cancel'">
                     </button>
                     <button @click="addOrUpdateField()"
-                            :disabled="!editingField || !editingField.name"
+                            :disabled="!editingField || !editingField.displayName?.trim()"
                             class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl text-sm font-semibold transition-colors"
                             x-text="editingIndex !== null ? 'Update field' : 'Add field'">
                     </button>
@@ -858,7 +882,10 @@ foreach(($components ?? []) as $cat => $comps) {
                                             <span x-text="typeStyle(field.type).icon"></span>
                                         </div>
                                         <div class="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                                            <span class="text-slate-800 font-medium font-mono text-sm" x-text="field.name"></span>
+                                            <span class="text-slate-800 font-medium text-sm" x-text="field.displayName || prettifyName(field.name)"></span>
+                                            <template x-if="field.displayName">
+                                                <span class="text-slate-400 font-mono text-xs" x-text="field.name"></span>
+                                            </template>
                                             <span class="px-1.5 py-0.5 rounded-full text-xs font-medium"
                                                   :class="typeStyle(field.type).badge"
                                                   x-text="typeStyle(field.type).label"></span>
@@ -960,15 +987,24 @@ foreach(($components ?? []) as $cat => $comps) {
                         <template x-if="cc() && cc().cEditingField">
                             <div class="space-y-5">
 
-                                {{-- Field name --}}
+                                {{-- Display name --}}
                                 <div>
                                     <label class="block text-sm font-medium text-slate-600 mb-2">
-                                        Name <span class="text-red-600">*</span>
+                                        Display name <span class="text-red-600">*</span>
                                     </label>
-                                    <input type="text" x-model="cc().cEditingField.name" placeholder="e.g. title"
+                                    <input type="text" x-model="cc().cEditingField.displayName" placeholder="e.g. Title"
+                                           class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+                                    <p class="text-xs text-slate-400 mt-1.5">Shown in the dashboard.</p>
+                                </div>
+
+                                {{-- Field name --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-600 mb-2">Name</label>
+                                    <input type="text" x-model="cc().cEditingField.name"
+                                           :placeholder="slugify(cc().cEditingField.displayName) || 'e.g. title'"
                                            class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 font-mono transition-all"
                                            @input="cc().cEditingField.name = $el.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
-                                    <p class="text-xs text-slate-400 mt-1.5">Lowercase letters, numbers and underscores only</p>
+                                    <p class="text-xs text-slate-400 mt-1.5">Lowercase letters, numbers and underscores only. Leave blank to auto-generate from the display name.</p>
                                 </div>
 
                                 {{-- Max length --}}
@@ -1128,7 +1164,10 @@ foreach(($components ?? []) as $cat => $comps) {
                                         <div class="space-y-1.5 mb-3">
                                             <template x-for="sf in compGetSubFieldArray()" :key="sf.name">
                                                 <div class="flex items-center gap-2 px-3 py-2.5 bg-slate-100 rounded-lg">
-                                                    <span class="text-xs font-mono text-slate-800 flex-1" x-text="sf.name"></span>
+                                                    <span class="text-xs text-slate-800 flex-1" x-text="sf.displayName || prettifyName(sf.name)"></span>
+                                                    <template x-if="sf.displayName">
+                                                        <span class="text-xs font-mono text-slate-400" x-text="sf.name"></span>
+                                                    </template>
                                                     <span class="text-xs text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded" x-text="sf.type"></span>
                                                     <button type="button" @click="compRemoveSubField(sf.name)"
                                                             class="text-slate-400 hover:text-red-600 transition-colors ml-1">
@@ -1144,11 +1183,10 @@ foreach(($components ?? []) as $cat => $comps) {
                                         </div>
                                         <div class="p-3 bg-slate-100 rounded-xl border border-slate-300 space-y-2.5">
                                             <div class="flex gap-2">
-                                                <input type="text" x-model="cc().cNewSubFieldName"
-                                                       placeholder="field_name"
-                                                       @input="cc().cNewSubFieldName = $el.value.toLowerCase().replace(/[^a-z0-9_]/g,'')"
+                                                <input type="text" x-model="cc().cNewSubFieldConfig.displayName"
+                                                       placeholder="Display name *"
                                                        @keydown.enter.prevent="compAddSubField()"
-                                                       class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs font-mono focus:outline-none focus:border-indigo-500">
+                                                       class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-indigo-500">
                                                 <select x-model="cc().cNewSubFieldType"
                                                         class="px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-indigo-500">
                                                     <option value="string">String</option>
@@ -1168,7 +1206,12 @@ foreach(($components ?? []) as $cat => $comps) {
                                                     <option value="json">JSON</option>
                                                 </select>
                                             </div>
-                                            <button type="button" @click="compAddSubField()" :disabled="!cc().cNewSubFieldName"
+                                            <input type="text" x-model="cc().cNewSubFieldName"
+                                                   :placeholder="slugify(cc().cNewSubFieldConfig.displayName) || 'field_name (auto-generated)'"
+                                                   @input="cc().cNewSubFieldName = $el.value.toLowerCase().replace(/[^a-z0-9_]/g,'')"
+                                                   @keydown.enter.prevent="compAddSubField()"
+                                                   class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs font-mono focus:outline-none focus:border-indigo-500">
+                                            <button type="button" @click="compAddSubField()" :disabled="!cc().cNewSubFieldConfig.displayName"
                                                     class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors">
                                                 Add sub-field
                                             </button>
@@ -1242,7 +1285,7 @@ foreach(($components ?? []) as $cat => $comps) {
                             ← Back
                         </button>
                         <button @click="compAddOrUpdateField()"
-                                :disabled="!(cc()?.cEditingField?.name)"
+                                :disabled="!(cc()?.cEditingField?.displayName?.trim())"
                                 class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-xl text-sm font-semibold transition-colors"
                                 x-text="cc()?.cEditingIndex !== null ? 'Update field' : 'Add field'">
                         </button>
@@ -1336,6 +1379,8 @@ function fieldBuilder(initialAttributes, uid, initialComponents, initialOptions)
 
         // ── Helpers ───────────────────────────────────────────────────
         typeStyle(type) { return S[type] ?? { icon: '?', bg: 'bg-gray-500/20', text: 'text-slate-500', badge: 'bg-gray-500/15 text-slate-500', label: type }; },
+        prettifyName(name) { return (name || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); },
+        slugify(name) { return (name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); },
         uniqueCategories() { return [...new Set(this.allComponents.map(c => c.category))]; },
         componentsByCategory(cat) { return this.allComponents.filter(c => c.category === cat); },
 
@@ -1373,7 +1418,9 @@ function fieldBuilder(initialAttributes, uid, initialComponents, initialOptions)
         },
 
         addOrUpdateField() {
-            if (!this.editingField?.name) return;
+            if (!this.editingField?.displayName?.trim()) { talos.toast('Display name is required.', 'error'); return; }
+            if (!this.editingField.name) this.editingField.name = this.slugify(this.editingField.displayName);
+            if (!this.editingField.name) { talos.toast('Could not generate a field name from that display name.', 'error'); return; }
             if (this.fields.some((f, i) => f.name === this.editingField.name && i !== this.editingIndex)) {
                 talos.toast('A field with this name already exists.', 'error');
                 return;
@@ -1404,7 +1451,8 @@ function fieldBuilder(initialAttributes, uid, initialComponents, initialOptions)
         },
 
         addSubField() {
-            const n = this.newSubFieldName.trim();
+            if (!this.newSubFieldConfig.displayName?.trim()) return;
+            const n = this.newSubFieldName.trim() || this.slugify(this.newSubFieldConfig.displayName);
             if (!n) return;
             if (!this.editingField.subFields) this.editingField.subFields = {};
             if (this.editingField.subFields[n]) { talos.toast('Sub-field "' + n + '" already exists.', 'error'); return; }
@@ -1489,7 +1537,9 @@ function fieldBuilder(initialAttributes, uid, initialComponents, initialOptions)
 
         compAddOrUpdateField() {
             const c = this.cc();
-            if (!c?.cEditingField?.name) return;
+            if (!c?.cEditingField?.displayName?.trim()) { talos.toast('Display name is required.', 'error'); return; }
+            if (!c.cEditingField.name) c.cEditingField.name = this.slugify(c.cEditingField.displayName);
+            if (!c.cEditingField.name) { talos.toast('Could not generate a field name from that display name.', 'error'); return; }
             if (c.fields.some((f, i) => f.name === c.cEditingField.name && i !== c.cEditingIndex)) {
                 talos.toast('A field with this name already exists.', 'error');
                 return;
@@ -1517,7 +1567,8 @@ function fieldBuilder(initialAttributes, uid, initialComponents, initialOptions)
         compAddSubField() {
             const c = this.cc();
             if (!c) return;
-            const n = c.cNewSubFieldName.trim();
+            if (!c.cNewSubFieldConfig.displayName?.trim()) return;
+            const n = c.cNewSubFieldName.trim() || this.slugify(c.cNewSubFieldConfig.displayName);
             if (!n) return;
             if (!c.cEditingField.subFields) c.cEditingField.subFields = {};
             if (c.cEditingField.subFields[n]) { talos.toast('Sub-field "' + n + '" already exists.', 'error'); return; }

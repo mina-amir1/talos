@@ -56,8 +56,13 @@
                     <div class="w-9 h-9 bg-slate-200 rounded-lg flex items-center justify-center text-xs font-mono text-slate-600 flex-shrink-0"
                          x-text="getTypeIcon(field.type)"></div>
                     <div class="flex-1">
-                        <p class="text-sm font-medium text-slate-800" x-text="field.name"></p>
-                        <p class="text-xs text-slate-400" x-text="field.type"></p>
+                        <p class="text-sm font-medium text-slate-800" x-text="field.displayName || prettifyName(field.name)"></p>
+                        <p class="text-xs text-slate-400">
+                            <span x-text="field.type"></span>
+                            <template x-if="field.displayName">
+                                <span class="font-mono" x-text="'· ' + field.name"></span>
+                            </template>
+                        </p>
                     </div>
                     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button @click="editField(index)" class="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded">
@@ -123,10 +128,19 @@
             </div>
             <div class="flex-1 overflow-y-auto p-5 space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-500 mb-1.5">Field name *</label>
-                    <input type="text" x-model="editingField.name" placeholder="e.g. url"
+                    <label class="block text-sm font-medium text-slate-500 mb-1.5">Display name *</label>
+                    <input type="text" x-model="editingField.displayName" placeholder="e.g. URL"
+                           class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-blue-500">
+                    <p class="text-xs text-slate-400 mt-1">Shown in the dashboard.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-500 mb-1.5">Field name</label>
+                    <input type="text" x-model="editingField.name"
+                           :placeholder="slugify(editingField.displayName) || 'e.g. url'"
                            class="w-full px-4 py-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm font-mono focus:outline-none focus:border-blue-500"
                            @input="editingField.name = $el.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
+                    <p class="text-xs text-slate-400 mt-1">Lowercase letters, numbers and underscores only. Leave blank to auto-generate from the display name.</p>
                 </div>
 
                 {{-- Repeater sub-fields --}}
@@ -136,7 +150,10 @@
                         <div class="space-y-1.5">
                             <template x-for="sf in getSubFieldArray()" :key="sf.name">
                                 <div class="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg">
-                                    <span class="text-xs font-mono text-slate-800 flex-1" x-text="sf.name"></span>
+                                    <span class="text-xs text-slate-800 flex-1" x-text="sf.displayName || prettifyName(sf.name)"></span>
+                                    <template x-if="sf.displayName">
+                                        <span class="text-xs font-mono text-slate-400" x-text="sf.name"></span>
+                                    </template>
                                     <span class="text-xs text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded" x-text="sf.type"></span>
                                     <button type="button" @click="removeSubField(sf.name)" class="text-slate-400 hover:text-red-600">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,10 +168,9 @@
                         </div>
                         <div class="space-y-2 p-3 bg-slate-100 rounded-lg border border-slate-300">
                             <div class="flex gap-2">
-                                <input type="text" x-model="newSubFieldName" placeholder="field_name"
+                                <input type="text" x-model="newSubFieldConfig.displayName" placeholder="Display name *"
                                        @keydown.enter.prevent="addSubField()"
-                                       @input="newSubFieldName = $el.value.toLowerCase().replace(/[^a-z0-9_]/g,'')"
-                                       class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded text-slate-800 text-xs font-mono focus:outline-none focus:border-blue-500">
+                                       class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded text-slate-800 text-xs focus:outline-none focus:border-blue-500">
                                 <select x-model="newSubFieldType" @change="newSubFieldConfig = {}"
                                         class="px-2 py-1.5 bg-white border border-slate-300 rounded text-slate-800 text-xs focus:outline-none focus:border-blue-500">
                                     <option value="string">String</option>
@@ -170,6 +186,12 @@
                                     <option value="enumeration">Enumeration</option>
                                 </select>
                             </div>
+
+                            <input type="text" x-model="newSubFieldName"
+                                   :placeholder="slugify(newSubFieldConfig.displayName) || 'field_name (auto-generated)'"
+                                   @keydown.enter.prevent="addSubField()"
+                                   @input="newSubFieldName = $el.value.toLowerCase().replace(/[^a-z0-9_]/g,'')"
+                                   class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-slate-800 text-xs font-mono focus:outline-none focus:border-blue-500">
 
                             <template x-if="newSubFieldType === 'enumeration'">
                                 <div>
@@ -211,7 +233,7 @@
                                 </label>
                             </template>
 
-                            <button type="button" @click="addSubField()" :disabled="!newSubFieldName"
+                            <button type="button" @click="addSubField()" :disabled="!newSubFieldConfig.displayName"
                                     class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded text-xs font-medium transition-colors">
                                 Add sub-field
                             </button>
@@ -315,7 +337,7 @@
             </div>
             <div class="px-5 py-4 border-t border-slate-200 flex gap-3">
                 <button @click="cancelEdit()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">Cancel</button>
-                <button @click="addOrUpdateField()" :disabled="!editingField.name"
+                <button @click="addOrUpdateField()" :disabled="!editingField.displayName?.trim()"
                         class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold"
                         x-text="editingIndex !== null ? 'Update' : 'Add'"></button>
             </div>
@@ -345,6 +367,8 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType', otherCompone
         availableComponents: otherComponents,
 
         getTypeIcon(t){ return icons[t]??'?'; },
+        prettifyName(name){ return (name||'').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase()); },
+        slugify(name){ return (name||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,''); },
 
         selectType(t){
             this.editingField = { type:t, name:'', required:false, unique:false };
@@ -359,7 +383,9 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType', otherCompone
         cancelEdit(){ this.editingField=null; this.editingIndex=null; },
 
         addOrUpdateField(){
-            if(!this.editingField.name)return;
+            if(!this.editingField.displayName?.trim()){talos.toast('Display name is required.','error');return;}
+            if(!this.editingField.name)this.editingField.name=this.slugify(this.editingField.displayName);
+            if(!this.editingField.name){talos.toast('Could not generate a field name from that display name.','error');return;}
             const dup=this.fields.some((f,i)=>f.name===this.editingField.name&&i!==this.editingIndex);
             if(dup){talos.toast('Name already exists.','error');return;}
             if(this.editingIndex!==null)this.fields[this.editingIndex]={...this.editingField};
@@ -373,7 +399,8 @@ function fieldBuilder(initialAttributes, uid, mode = 'contentType', otherCompone
             return Object.entries(this.editingField.subFields).map(([name,f])=>({name,...f}));
         },
         addSubField(){
-            const n=this.newSubFieldName.trim();
+            if(!this.newSubFieldConfig.displayName?.trim())return;
+            const n=this.newSubFieldName.trim()||this.slugify(this.newSubFieldConfig.displayName);
             if(!n)return;
             if(!this.editingField.subFields)this.editingField.subFields={};
             if(this.editingField.subFields[n]){talos.toast('Sub-field "'+n+'" already exists.','error');return;}

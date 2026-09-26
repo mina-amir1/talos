@@ -266,7 +266,7 @@
                 <div class="space-y-4 p-3 bg-white border border-slate-200 rounded-lg">
                     @foreach($nestedSchema['attributes'] ?? [] as $nnName => $nnField)
                         <div>
-                            <label class="block text-xs font-medium text-slate-500 mb-1">{{ ucwords(str_replace('_', ' ', $nnName)) }}</label>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">{{ $nnField['displayName'] ?? ucwords(str_replace('_', ' ', $nnName)) }}</label>
                             @include('talos.content.form._field_subfield', [
                                 'subName'  => $nnName,
                                 'subField' => $nnField,
