@@ -21,7 +21,9 @@ class ConvertImageToWebp implements ShouldQueue
     {
         $media = TalosMedia::find($this->mediaId);
 
-        if (! $media || $media->status !== 'converting') {
+        // 'failed' is included so a previously-failed conversion can be re-dispatched
+        // (e.g. via `php artisan talos:reconvert-media`) without a status reset first.
+        if (! $media || ! in_array($media->status, ['converting', 'failed'], true)) {
             return;
         }
 
@@ -29,7 +31,8 @@ class ConvertImageToWebp implements ShouldQueue
         $originalPath = $media->path;
 
         if (! $disk->exists($originalPath)) {
-            $media->update(['status' => 'ready']);
+            // File genuinely missing — not a success, leave it distinguishable from 'ready'.
+            $media->update(['status' => 'failed']);
             return;
         }
 
@@ -59,6 +62,7 @@ class ConvertImageToWebp implements ShouldQueue
 
     public function failed(\Throwable $e): void
     {
-        TalosMedia::where('id', $this->mediaId)->update(['status' => 'ready']);
+        \Log::error("ConvertImageToWebp failed for media #{$this->mediaId}: {$e->getMessage()}");
+        TalosMedia::where('id', $this->mediaId)->update(['status' => 'failed']);
     }
 }
