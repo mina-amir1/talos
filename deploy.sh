@@ -565,7 +565,7 @@ else
                 "php${PHP_VER}-sqlite3" "php${PHP_VER}-mbstring" "php${PHP_VER}-xml"
                 "php${PHP_VER}-curl" "php${PHP_VER}-zip" "php${PHP_VER}-bcmath"
                 "php${PHP_VER}-fileinfo" "php${PHP_VER}-tokenizer" "php${PHP_VER}-ctype"
-                "php${PHP_VER}-intl"
+                "php${PHP_VER}-intl" "php${PHP_VER}-gd"
             )
             ;;
         rhel)
@@ -574,6 +574,7 @@ else
                 "php${PHP_VER//./}-pdo" "php${PHP_VER//./}-sqlite3" "php${PHP_VER//./}-mbstring"
                 "php${PHP_VER//./}-xml" "php${PHP_VER//./}-curl" "php${PHP_VER//./}-zip"
                 "php${PHP_VER//./}-bcmath" "php${PHP_VER//./}-fileinfo" "php${PHP_VER//./}-intl"
+                "php${PHP_VER//./}-gd"
             )
             ;;
     esac
@@ -589,7 +590,7 @@ fi
 # Verify required extensions
 start_spinner "Verifying PHP extensions"
 MISSING_EXTS=()
-for ext in pdo pdo_sqlite sqlite3 mbstring xml ctype json bcmath fileinfo curl tokenizer zip; do
+for ext in pdo pdo_sqlite sqlite3 mbstring xml ctype json bcmath fileinfo curl tokenizer zip gd; do
     php_ext_ok "$PHP_VER" "$ext" 2>/dev/null || MISSING_EXTS+=("$ext")
 done
 stop_spinner
