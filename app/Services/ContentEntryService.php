@@ -48,6 +48,43 @@ class ContentEntryService
         return $data;
     }
 
+    /**
+     * Decode JSON-string payloads for fields stored as JSON columns.
+     *
+     * Clients that cannot express nested structures (multipart, form-encoded) send these
+     * fields as JSON text. Without decoding, Eloquent's `array` cast encodes the string
+     * again, so the API reads back a string instead of an object and nested media IDs are
+     * never hydrated. Values that are not valid JSON are left untouched for the validator
+     * to reject.
+     */
+    public function normalizeJsonFields(array $data, array $attributes): array
+    {
+        foreach ($attributes as $name => $field) {
+            if (! array_key_exists($name, $data) || ! ContentTypeService::isJsonStored($field)) {
+                continue;
+            }
+
+            $value = $data[$name];
+
+            if (! is_string($value)) {
+                continue;
+            }
+
+            if ($value === '') {
+                $data[$name] = null;
+                continue;
+            }
+
+            $decoded = json_decode($value, true);
+
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $data[$name] = $decoded;
+            }
+        }
+
+        return $data;
+    }
+
     public function loadRelationOptions(array $attributes): array
     {
         $options = [];

@@ -118,6 +118,22 @@ class ContentTypeService
         return null;
     }
 
+    /**
+     * Whether a field is persisted as a JSON column (cast to `array` on the model).
+     * Such fields must be validated and written as arrays — passing a JSON string
+     * makes Eloquent encode it a second time, so reads decode back to a string and
+     * nested media IDs never hydrate.
+     */
+    public static function isJsonStored(array $field): bool
+    {
+        return match ($field['type'] ?? '') {
+            'json', 'component', 'dynamiczone', 'repeater' => true,
+            'media', 'file', 'enumeration'                 => (bool) ($field['multiple'] ?? false),
+            'relation'                                     => in_array($field['relation'] ?? 'manyToOne', ['oneToMany', 'manyToMany'], true),
+            default                                        => false,
+        };
+    }
+
     public function buildValidationRules(array $attributes): array
     {
         $rules = [];
@@ -132,6 +148,8 @@ class ContentTypeService
             if (in_array($type, ['file', 'media'], true) && $isMultiple) {
                 $rule[] = 'array';
                 $rules["$name.*"] = 'integer';
+            } elseif (self::isJsonStored($field)) {
+                $rule[] = 'array';
             } else {
                 $rule[] = match ($type) {
                     'string', 'text', 'richtext', 'uid', 'url' => 'string',

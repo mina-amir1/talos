@@ -55,12 +55,23 @@
             </div>
 
             <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Custom Domain <span class="text-slate-400">(optional)</span></label>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Public Domain</label>
                 <input type="url" name="r2_media_domain"
                        value="{{ old('r2_media_domain', $config['r2_media_domain']) }}"
                        class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                       placeholder="https://media.example.com">
+                       placeholder="https://pub-xxxxxxxx.r2.dev or https://media.example.com">
                 @error('r2_media_domain')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                <p class="text-xs text-slate-400 mt-1">
+                    Required for uploaded files to actually load. R2 buckets are private by default —
+                    enable "Public access" (R2.dev subdomain or a connected custom domain) on this bucket
+                    in the Cloudflare dashboard, then paste that public URL here. Without it, media URLs
+                    point at R2's private API endpoint and will fail to load with a 400 error.
+                </p>
+                @if(($config['r2_media_enabled'] ?? '0') === '1' && empty($config['r2_media_domain']))
+                    <p class="text-xs text-amber-600 mt-1.5 font-medium">
+                        ⚠ R2 is enabled but no public domain is set — uploaded media previews will not load until you add one.
+                    </p>
+                @endif
             </div>
 
             <div class="flex gap-3 pt-2">

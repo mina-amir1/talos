@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Exceptions\FileRejectedException;
 use App\Http\Controllers\Controller;
 use App\Jobs\DispatchWebhook;
+use App\Services\ContentEntryService;
 use App\Services\ContentTypeService;
 use App\Services\DynamicModelService;
 use App\Services\EntryTransformerService;
@@ -12,6 +13,7 @@ use App\Services\FileUploadService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Validator;
 
 class ContentApiController extends Controller
 {
@@ -21,6 +23,7 @@ class ContentApiController extends Controller
         private EntryTransformerService $transformer,
         private NotificationService     $notifications,
         private FileUploadService       $uploads,
+        private ContentEntryService     $entries,
     ) {}
 
     /**
@@ -204,7 +207,8 @@ class ContentApiController extends Controller
             unset($rules[$field], $rules["$field.*"]);
         }
 
-        $validated = array_merge($request->validate($rules), $upload['values']);
+        $payload   = $this->entries->normalizeJsonFields($request->all(), $attributes);
+        $validated = array_merge(Validator::make($payload, $rules)->validate(), $upload['values']);
         $model     = $this->modelService->make($uid);
 
         if (($contentType['kind'] ?? 'collectionType') === 'singleType') {
@@ -235,16 +239,18 @@ class ContentApiController extends Controller
             return $this->notFound($name);
         }
 
-        $uid = $contentType['__uid'];
+        $uid        = $contentType['__uid'];
+        $attributes = $contentType['attributes'] ?? [];
 
-        $upload = $this->resolveFileUploads($request, $contentType['attributes'] ?? []);
+        $upload = $this->resolveFileUploads($request, $attributes);
         if ($upload['error']) {
             return $upload['error'];
         }
 
-        $model = $this->modelService->make($uid);
-        $entry = $this->resolveEntry($model, $id, (bool) ($contentType['options']['i18n'] ?? false), $this->requestLocale($request));
-        $entry->update(array_merge($request->all(), $upload['values']));
+        $model   = $this->modelService->make($uid);
+        $entry   = $this->resolveEntry($model, $id, (bool) ($contentType['options']['i18n'] ?? false), $this->requestLocale($request));
+        $payload = $this->entries->normalizeJsonFields($request->all(), $attributes);
+        $entry->update(array_merge($payload, $upload['values']));
 
         $entryData = $entry->fresh()->toArray();
         DispatchWebhook::dispatch('entry.update', $uid, $entryData);
@@ -291,8 +297,9 @@ class ContentApiController extends Controller
             return $upload['error'];
         }
 
-        $model = $this->modelService->make($uid);
-        $entry = $model->newQuery()->first();
+        $model   = $this->modelService->make($uid);
+        $entry   = $model->newQuery()->first();
+        $payload = $this->entries->normalizeJsonFields($request->all(), $attributes);
 
         if (! $entry) {
             $rules = $this->typeService->buildValidationRules($attributes);
@@ -300,10 +307,10 @@ class ContentApiController extends Controller
                 unset($rules[$field], $rules["$field.*"]);
             }
 
-            $validated = array_merge($request->validate($rules), $upload['values']);
+            $validated = array_merge(Validator::make($payload, $rules)->validate(), $upload['values']);
             $entry     = $model->newQuery()->create($validated);
         } else {
-            $entry->update(array_merge($request->all(), $upload['values']));
+            $entry->update(array_merge($payload, $upload['values']));
         }
 
         return response()->json(['data' => $entry]);
