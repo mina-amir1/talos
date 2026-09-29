@@ -265,8 +265,9 @@
                 @include('talos.content.form._repeater_rows_ui', ['attrs' => $nestedSchema['attributes'] ?? [], 'depth' => $depth])
             </div>
         @else
-            <div x-data="{ d: (() => { try { const v = {{ $bind }}; const o = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; return JSON.parse(JSON.stringify(o)); } catch(e) { return {}; } })() }"
-                 x-init="$watch('d', v => {{ $bind }} = v, { deep: true })">
+            @php $dVar = 'd' . ($depth + 1); @endphp
+            <div x-data="{ {{ $dVar }}: (() => { try { const v = {{ $bind }}; const o = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; return JSON.parse(JSON.stringify(o)); } catch(e) { return {}; } })() }"
+                 x-init="$watch('{{ $dVar }}', v => {{ $bind }} = v, { deep: true })">
                 <div class="space-y-4 p-3 bg-white border border-slate-200 rounded-lg">
                     @foreach($nestedSchema['attributes'] ?? [] as $nnName => $nnField)
                         <div>
@@ -274,7 +275,7 @@
                             @include('talos.content.form._field_subfield', [
                                 'subName'  => $nnName,
                                 'subField' => $nnField,
-                                'bind'     => "d['{$nnName}']",
+                                'bind'     => "{$dVar}['{$nnName}']",
                                 'depth'    => $depth + 1,
                                 'openExpr' => 'true',
                             ])
