@@ -11,18 +11,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-    tailwind.config = {
-        theme: {
-            extend: {
-                fontFamily: {
-                    sans: ['Inter', 'system-ui', 'sans-serif'],
-                },
-            }
-        }
-    }
-    </script>
+    {{-- Precompiled Tailwind (see resources/css/talos-admin.src.css for how to rebuild) —
+         replaces the cdn.tailwindcss.com runtime JIT compiler, which caused a visible
+         flash of unstyled content on every load (it has to scan the whole rendered page
+         and inject styles *after* the HTML is already on screen). A static stylesheet
+         applies before first paint, like any normal CSS file. --}}
+    <link rel="stylesheet" href="{{ asset('css/talos-admin.css') }}?v={{ @filemtime(public_path('css/talos-admin.css')) }}">
 
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

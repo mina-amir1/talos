@@ -5,13 +5,16 @@
     $recipientStr   = old('recipients',       $rule ? implode("\n", $rule->recipients) : '');
     $collOpts       = collect($contentTypes)->map(fn($l, $v) => ['v' => $v, 'l' => $l])->values()->all();
 
+    // Full class strings (not built from interpolated fragments) so a static Tailwind
+    // scan of this file finds every class literally, regardless of which $val is active.
     $eventColors = [
-        'entry.create'    => 'emerald',
-        'entry.update'    => 'blue',
-        'entry.delete'    => 'red',
-        'entry.publish'   => 'violet',
-        'entry.unpublish' => 'slate',
+        'entry.create'    => ['label' => 'has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-50', 'input' => 'text-emerald-600 focus:ring-emerald-500'],
+        'entry.update'    => ['label' => 'has-[:checked]:border-blue-400 has-[:checked]:bg-blue-50',       'input' => 'text-blue-600 focus:ring-blue-500'],
+        'entry.delete'    => ['label' => 'has-[:checked]:border-red-400 has-[:checked]:bg-red-50',         'input' => 'text-red-600 focus:ring-red-500'],
+        'entry.publish'   => ['label' => 'has-[:checked]:border-violet-400 has-[:checked]:bg-violet-50',   'input' => 'text-violet-600 focus:ring-violet-500'],
+        'entry.unpublish' => ['label' => 'has-[:checked]:border-slate-400 has-[:checked]:bg-slate-50',     'input' => 'text-slate-600 focus:ring-slate-500'],
     ];
+    $defaultColor = ['label' => 'has-[:checked]:border-slate-400 has-[:checked]:bg-slate-50', 'input' => 'text-slate-600 focus:ring-slate-500'];
 @endphp
 
 <div class="space-y-4">
@@ -33,11 +36,11 @@
         </label>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             @foreach($events as $val => $label)
-            @php $color = $eventColors[$val] ?? 'slate'; @endphp
-            <label class="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors has-[:checked]:border-{{ $color }}-400 has-[:checked]:bg-{{ $color }}-50">
+            @php $color = $eventColors[$val] ?? $defaultColor; @endphp
+            <label class="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors {{ $color['label'] }}">
                 <input type="checkbox" name="events[]" value="{{ $val }}"
                        {{ in_array($val, $selectedEvents) ? 'checked' : '' }}
-                       class="w-3.5 h-3.5 rounded border-slate-300 text-{{ $color }}-600 focus:ring-{{ $color }}-500 focus:ring-offset-0">
+                       class="w-3.5 h-3.5 rounded border-slate-300 focus:ring-offset-0 {{ $color['input'] }}">
                 <span class="text-xs font-medium text-slate-700">{{ $label }}</span>
             </label>
             @endforeach

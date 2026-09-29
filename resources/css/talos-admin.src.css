@@ -1,0 +1,24 @@
+/*
+ * Source file for the Talos admin panel's compiled CSS.
+ *
+ * This is compiled with the standalone Tailwind CLI (no Node/npm needed — see
+ * https://tailwindcss.com/blog/standalone-cli), NOT the Vite pipeline used by
+ * Laravel's default scaffold (resources/css/app.css / welcome.blade.php) — the
+ * two are unrelated and intentionally kept separate.
+ *
+ * Rebuild after changing Tailwind classes anywhere under resources/views/talos/
+ * or resources/views/vendor/pagination/:
+ *
+ *   ./tailwindcss-cli -i resources/css/talos-admin.src.css \
+ *                      -o public/css/talos-admin.css --minify
+ *
+ * (get the CLI binary for your OS from the tailwindcss GitHub releases page)
+ */
+@import "tailwindcss";
+
+@source "../views/talos/**/*.blade.php";
+@source "../views/vendor/pagination/*.blade.php";
+
+@theme {
+    --font-sans: 'Inter', system-ui, sans-serif;
+}
