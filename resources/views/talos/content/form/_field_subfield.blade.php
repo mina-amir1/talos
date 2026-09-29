@@ -116,7 +116,8 @@
                     class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors">
                 <span x-text="_mids.length ? 'Add / change media' : 'Select from library'"></span>
             </button>
-            <div x-show="_mshow" x-cloak
+            <template x-if="_mshow">
+            <div x-cloak
                  class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
                  @keydown.escape.window="_mshow = false">
                 <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
@@ -156,6 +157,7 @@
                     </div>
                 </div>
             </div>
+            </template>
         </div>
     @else
         <div x-data="{
@@ -178,7 +180,8 @@
                     class="px-3 py-1.5 bg-slate-100 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-medium transition-colors">
                 <span x-text="_mid ? 'Change media' : 'Select from library'"></span>
             </button>
-            <div x-show="_mshow" x-cloak
+            <template x-if="_mshow">
+            <div x-cloak
                  class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
                  @keydown.escape.window="_mshow = false">
                 <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
@@ -215,6 +218,7 @@
                     </div>
                 </div>
             </div>
+            </template>
         </div>
     @endif
 
