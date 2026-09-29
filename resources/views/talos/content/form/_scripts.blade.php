@@ -1,4 +1,4 @@
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="{{ asset('js/quill-1.3.7.min.js') }}"></script>
 <script>
 // ── Repeater Alpine component ─────────────────────────────────────────────────
 function repeaterField(initialRows, emptyRow) {

@@ -21,7 +21,7 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<link href="{{ asset('css/quill-1.3.7.snow.css') }}" rel="stylesheet">
 <style>
     .ql-toolbar.ql-snow { background: #f8fafc; border: 1px solid #e2e8f0; border-bottom: none; border-radius: 0.5rem 0.5rem 0 0; }
     .ql-container.ql-snow { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0 0 0.5rem 0.5rem; }
