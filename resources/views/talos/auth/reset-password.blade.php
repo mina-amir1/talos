@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="{{ asset('css/talos-admin.css') }}?v={{ @filemtime(public_path('css/talos-admin.css')) }}">
+    <script defer src="{{ asset('js/alpine-3.17.4.min.js') }}"></script>
     <style>
         body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; background: #f1f5f9; }
         .login-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04); border-radius: 1rem; }

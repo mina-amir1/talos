@@ -18,8 +18,12 @@
          applies before first paint, like any normal CSS file. --}}
     <link rel="stylesheet" href="{{ asset('css/talos-admin.css') }}?v={{ @filemtime(public_path('css/talos-admin.css')) }}">
 
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {{-- Self-hosted (was cdn.jsdelivr.net) — the sidebar and other x-cloak'd elements stay
+         invisible until Alpine finishes loading, so any CDN latency was directly visible as
+         "the sidebar takes a second to appear". A same-origin static file has no such
+         external round-trip and is cached by the browser like any other asset. --}}
+    <script defer src="{{ asset('js/alpine-3.17.4.min.js') }}"></script>
+    <script src="{{ asset('js/chart-4.4.0.umd.min.js') }}"></script>
 
     <style>
         *, *::before, *::after { box-sizing: border-box; }

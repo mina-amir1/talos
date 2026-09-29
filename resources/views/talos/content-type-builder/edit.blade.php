@@ -1670,5 +1670,5 @@ function fieldBuilder(initialAttributes, uid, initialComponents, initialOptions)
     };
 }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="{{ asset('js/sortable-1.15.2.min.js') }}"></script>
 @endsection
