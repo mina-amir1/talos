@@ -78,7 +78,16 @@
     }
 @endphp
 
-<div class="flex flex-col lg:flex-row gap-6 items-start">
+<div x-data="{ _formReady: false }"
+     x-init="document.addEventListener('alpine:initialized', () => { _formReady = true }, { once: true })"
+     :class="!_formReady && 'opacity-60 pointer-events-none select-none'"
+     class="flex flex-col lg:flex-row gap-6 items-start">
+
+    {{-- Fields bind to Alpine (x-model) once its walk of this page finishes; interacting before
+         that lands on a plain, not-yet-bound input whose value Alpine then silently overwrites
+         with the server default the moment it catches up. Locking the form until
+         'alpine:initialized' fires closes that race — on data-heavy entries the walk can take
+         over a second even though the page already looks fully rendered. --}}
 
     {{-- ── Main form ── --}}
     <form action="{{ $isEdit
