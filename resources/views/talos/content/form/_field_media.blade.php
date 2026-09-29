@@ -42,7 +42,8 @@
             <span x-text="ids.length ? ids.length + ' file(s) selected — edit' : 'Select files'"></span>
         </button>
 
-        <div x-show="show" x-cloak
+        <template x-if="show">
+        <div x-cloak
              class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
              @keydown.escape.window="show = false">
             <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
@@ -94,6 +95,7 @@
                 </div>
             </div>
         </div>
+        </template>
     </div>
 
 @else
@@ -115,7 +117,8 @@
             <span x-text="selectedId ? 'Change media' : 'Select from library'"></span>
         </button>
 
-        <div x-show="show" x-cloak
+        <template x-if="show">
+        <div x-cloak
              class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
              @keydown.escape.window="show = false">
             <div class="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
@@ -154,5 +157,6 @@
                 </div>
             </div>
         </div>
+        </template>
     </div>
 @endif
